@@ -7,7 +7,7 @@
 | **Created** | 2026-06-25 |
 | **Database** | PostgreSQL 18.4 |
 | **Migration Tool** | Flyway 12.4.0 |
-| **Related Documents** | [BRD](./Feature_Management_Service_BRD.md) · [Technical Architecture](./Feature_Management_Service_Technical_Architecture.md) · [Technology Stack](./Feature_Management_Service_Technology_Stack.md) |
+| **Related Documents** | [BRD](./Feature_Management_Service_BRD.md) · [Technical Architecture](./Feature_Management_Service_Technical_Architecture.md) · [Redis Cache Design](./Feature_Management_Service_Redis_Cache_Design.md) · [Technology Stack](./Feature_Management_Service_Technology_Stack.md) |
 
 ---
 
@@ -21,7 +21,7 @@ This document defines the **PostgreSQL relational data model** for the Feature M
 - Version numbering and publish Outbox mechanics
 - Responsibility boundaries between PostgreSQL and the Redis cache layer
 
-**Out of scope**: Redis key patterns are documented in [Technical Architecture §11.2](./Feature_Management_Service_Technical_Architecture.md). Explain results are computed at runtime and are **not persisted**.
+**Out of scope**: Redis key patterns and cache design are documented in [Redis Cache Design](./Feature_Management_Service_Redis_Cache_Design.md). Explain results are computed at runtime and are **not persisted**.
 
 ---
 

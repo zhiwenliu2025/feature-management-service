@@ -5,7 +5,7 @@
 | **Document Version** | 1.1 |
 | **Status** | Draft |
 | **Created** | 2026-06-25 |
-| **Related Documents** | [BRD](./Feature_Management_Service_BRD.md), [Design Brief](./Align_Expert_Software_Engineer_R2_Quiz.md) |
+| **Related Documents** | [BRD](./Feature_Management_Service_BRD.md), [Database Schema](./Feature_Management_Service_Database_Schema.md), [Redis Cache Design](./Feature_Management_Service_Redis_Cache_Design.md), [Design Brief](./Align_Expert_Software_Engineer_R2_Quiz.md) |
 | **Product Name** | Feature Management Service (FMS) |
 
 ---
@@ -599,12 +599,15 @@ publish_jobs (
 
 ### 11.2 Redis Keys
 
+See [Redis Cache Design](./Feature_Management_Service_Redis_Cache_Design.md) for the full key namespace, value formats, TTL policies, and read/write paths.
+
 | Key Pattern | Value |
 |-------------|-------|
-| `fms:snap:{env}:{appId}:current` | Pointer to current version |
-| `fms:snap:{env}:{appId}:v{version}` | Compiled snapshot blob |
-| `fms:delta:{env}:{from}:{to}:{appId}` | Precomputed delta (optional optimization) |
-| `fms:pubsub:{env}` | Invalidation channel |
+| `{fms:{env}:{appId}}:snap:current` | Pointer to current version |
+| `{fms:{env}:{appId}}:snap:v{version}` | Compiled snapshot blob (gzip JSON) |
+| `{fms:{env}:{appId}}:delta:{from}:{to}` | Precomputed delta (optional) |
+| `{fms:{env}}:env:version` | Environment-wide current version |
+| `fms:pubsub:{env}` | Invalidation Pub/Sub channel |
 
 ---
 
