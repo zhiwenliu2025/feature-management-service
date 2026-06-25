@@ -25,6 +25,7 @@ dependencies {
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor:4.1.0")
 
     testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.boot.starter.webmvc.test)
     testImplementation(libs.testcontainers.junit)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.testcontainers.redis)

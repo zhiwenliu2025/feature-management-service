@@ -1,78 +1,50 @@
 package com.fms.platform;
 
-import io.swagger.v3.oas.annotations.Hidden;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
+import com.fms.platform.dto.HealthResponse;
+import com.fms.platform.dto.ReadinessResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.sql.DataSource;
 import java.time.Instant;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.Locale;
 
 @RestController
-@Hidden
+@Tag(name = "Platform", description = "Operational and discovery endpoints")
 public class PlatformController {
 
-    private final JdbcTemplate jdbcTemplate;
-    private final RedisConnectionFactory redisConnectionFactory;
-    private final String openapiVersion;
+    private final PlatformHealthService healthService;
+    private final PlatformOpenApiService openApiService;
 
-    public PlatformController(
-            DataSource dataSource,
-            RedisConnectionFactory redisConnectionFactory,
-            @Value("${fms.api.version:v1}") String openapiVersion) {
-        this.jdbcTemplate = new JdbcTemplate(dataSource);
-        this.redisConnectionFactory = redisConnectionFactory;
-        this.openapiVersion = openapiVersion;
+    public PlatformController(PlatformHealthService healthService, PlatformOpenApiService openApiService) {
+        this.healthService = healthService;
+        this.openApiService = openApiService;
     }
 
     @GetMapping("/health")
-    Map<String, Object> health() {
-        return Map.of(
-                "status", "UP",
-                "timestamp", Instant.now().toString());
+    @Operation(summary = "Liveness probe", description = "Returns UP when the process is running.")
+    HealthResponse health() {
+        return new HealthResponse("UP", Instant.now());
     }
 
     @GetMapping("/ready")
-    ResponseEntity<Map<String, Object>> ready() {
-        Map<String, String> checks = new LinkedHashMap<>();
-        checks.put("postgresql", checkPostgres());
-        checks.put("redis", checkRedis());
-
-        boolean allUp = checks.values().stream().allMatch("UP"::equals);
-        Map<String, Object> body = Map.of(
-                "status", allUp ? "READY" : "NOT_READY",
-                "checks", checks);
-
-        return allUp ? ResponseEntity.ok(body) : ResponseEntity.status(503).body(body);
+    @Operation(summary = "Readiness probe", description = "Checks PostgreSQL and Redis connectivity.")
+    ResponseEntity<ReadinessResponse> ready() {
+        ReadinessResponse response = healthService.readiness();
+        return "READY".equals(response.status())
+                ? ResponseEntity.ok(response)
+                : ResponseEntity.status(503).body(response);
     }
 
-    @GetMapping("/v1/openapi.json")
-    Map<String, String> openapiInfo() {
-        return Map.of(
-                "message", "Use /v3/api-docs for generated OpenAPI document",
-                "version", openapiVersion);
-    }
-
-    private String checkPostgres() {
-        try {
-            jdbcTemplate.queryForObject("SELECT 1", Integer.class);
-            return "UP";
-        } catch (Exception ex) {
-            return "DOWN";
-        }
-    }
-
-    private String checkRedis() {
-        try {
-            redisConnectionFactory.getConnection().ping();
-            return "UP";
-        } catch (Exception ex) {
-            return "DOWN";
-        }
+    @GetMapping(value = "/v1/openapi.json", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "OpenAPI specification", description = "Aggregated OpenAPI 3.1 document for all modules.")
+    ResponseEntity<byte[]> openapi(HttpServletRequest request, Locale locale) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(openApiService.openApiDocument(request, locale));
     }
 }

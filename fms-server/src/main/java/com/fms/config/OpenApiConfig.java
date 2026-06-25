@@ -14,6 +14,7 @@ public class OpenApiConfig {
     @Bean
     OpenAPI fmsOpenApi() {
         return new OpenAPI()
+                .openapi("3.1.0")
                 .info(new Info()
                         .title("Feature Management Service API")
                         .description("FMS control and data plane APIs")
