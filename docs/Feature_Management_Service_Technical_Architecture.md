@@ -5,7 +5,7 @@
 | **Document Version** | 1.1 |
 | **Status** | Draft |
 | **Created** | 2026-06-25 |
-| **Related Documents** | [BRD](./Feature_Management_Service_BRD.md), [Database Schema](./Feature_Management_Service_Database_Schema.md), [Redis Cache Design](./Feature_Management_Service_Redis_Cache_Design.md), [Design Brief](./Align_Expert_Software_Engineer_R2_Quiz.md) |
+| **Related Documents** | [BRD](./Feature_Management_Service_BRD.md), [API Design](./Feature_Management_Service_API_Design.md), [Database Schema](./Feature_Management_Service_Database_Schema.md), [Redis Cache Design](./Feature_Management_Service_Redis_Cache_Design.md), [Design Brief](./Align_Expert_Software_Engineer_R2_Quiz.md) |
 | **Product Name** | Feature Management Service (FMS) |
 
 ---
@@ -284,6 +284,8 @@ See [Technology Stack](./Feature_Management_Service_Technology_Stack.md) §4.4 f
 ---
 
 ## 8. API Design
+
+See [API Design](./Feature_Management_Service_API_Design.md) for the full modular API specification (endpoints, schemas, auth, errors, and rate limits).
 
 Base URL pattern: `https://fms.{env}.example.com/api`
 
