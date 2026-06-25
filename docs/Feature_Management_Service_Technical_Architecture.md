@@ -2,7 +2,7 @@
 
 | Attribute | Value |
 |-----------|-------|
-| **Document Version** | 1.0 |
+| **Document Version** | 1.1 |
 | **Status** | Draft |
 | **Created** | 2026-06-25 |
 | **Related Documents** | [BRD](./Feature_Management_Service_BRD.md), [Design Brief](./Align_Expert_Software_Engineer_R2_Quiz.md) |
@@ -120,11 +120,11 @@ flowchart TB
 | Container | Responsibility |
 |-----------|----------------|
 | **Management API** | Flag CRUD, rule editing, environment promotion, release binding, RBAC, kill switch |
-| **Config Sync API** | Serve full/incremental snapshots per `appId` + `environment`; SSE or long-poll for updates |
+| **Config Sync API** | Serve full/incremental snapshots per `appId` + `environment`; **SSE** for version update streaming |
 | **Evaluation API** | Stateless remote evaluation for clients without full snapshot or server-side-only integrations |
 | **Explain API** | Return structured decision traces; support historical replay by `configVersion` |
 | **Rule Engine** | Shared deterministic evaluator used by SDK, Evaluation API, and Explain API |
-| **Publish Worker** | On publish: validate → version bump → compile snapshot → write cache → notify subscribers |
+| **Publish Worker** | Poll `publish_jobs` Outbox → validate → compile snapshot → write cache → Redis Pub/Sub notify |
 | **Config Store** | Relational source of truth with versioned rows |
 | **Distributed Cache** | Low-latency snapshot delivery and version-indexed invalidation |
 
@@ -178,9 +178,10 @@ Same algorithm and salt are implemented in all SDKs and server-side engine build
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           CONTROL PLANE                                  │
 │  Admin Console / CI ──► Management API ──► PostgreSQL (source of truth) │
-│                              │                                           │
+│                              │         (flag_versions + publish_jobs)      │
 │                              ▼                                           │
 │                       Publish Worker ──► Redis (compiled snapshots)      │
+│                       (polls publish_jobs Outbox)                        │
 └─────────────────────────────────────────────────────────────────────────┘
                                │ version bump / pub-sub
                                ▼
@@ -233,15 +234,18 @@ Each publish increments a global monotonic `configVersion` per `environment`.
 |-----------|-----------|---------|
 | **Full snapshot** | Cold start, version gap too large, first connect | Complete subscribed flag set |
 | **Incremental delta** | `sinceVersion` within retention window (e.g., last 100 versions) | Changed flags only + `deletedFlagKeys` |
-| **Streaming (SSE)** | Long-lived connections (server SDK, web) | `version` events triggering delta fetch |
+| **Streaming (SSE)** | Long-lived connections (server SDK, web); sole streaming protocol | `version` events triggering delta fetch |
 
 **Invalidation flow**:
 
 ```
-1. Management API commits publish (PostgreSQL transaction)
-2. Publish Worker compiles snapshot, writes Redis, sets currentVersion
-3. Redis Pub/Sub channel: fms:invalidate:{env}
-4. Sync API nodes / SDKs receive event → fetch delta if localVersion < currentVersion
+1. Management API commits publish in one transaction:
+   flag_version + audit_events + publish_jobs (status=pending)
+2. Management API returns 202 Accepted (configVersion allocated)
+3. Publish Worker claims job (FOR UPDATE SKIP LOCKED), compiles snapshot,
+   writes Redis, sets currentVersion, marks job completed
+4. Redis Pub/Sub channel: fms:invalidate:{env}
+5. Sync API nodes / SDKs receive event → fetch delta if localVersion < currentVersion
 ```
 
 Avoids O(apps × flags) broadcast storms.
@@ -258,6 +262,24 @@ Evaluation API nodes hold a local LRU of hot `(env, appId, version)` snapshot sl
 | Delta retention window | Force full snapshot if client is too stale |
 | Rate limits | Per `appId` API key quotas on sync and remote evaluate |
 | Compression | gzip/brotli on snapshot payloads; compact binary format for mobile |
+
+### 7.6 Async Publish — PostgreSQL Outbox
+
+Publish is decoupled from the Management API request thread without a message broker. The **Transactional Outbox** pattern ensures the publish job is never lost if the API commit succeeds.
+
+| Aspect | Design |
+|--------|--------|
+| **Write path** | Single PostgreSQL transaction: `flag_versions` + `audit_events` + `publish_jobs` (`status=pending`) |
+| **API response** | `202 Accepted` with `configVersion` immediately after commit |
+| **Consumption** | Publish Worker polls `publish_jobs` with `FOR UPDATE SKIP LOCKED` |
+| **Idempotency** | Worker checks `config_version` before writing Redis; safe to retry |
+| **Retry** | Exponential backoff via `next_retry_at`; `max_attempts` (default 5) then `failed` |
+| **Scaling** | Multiple Worker replicas compete for jobs; HPA on `fms_publish_jobs_backlog` |
+| **Notification** | After job completes, Worker `PUBLISH`es to Redis `fms:pubsub:{env}` (best-effort signal) |
+
+**Why not Redis Pub/Sub for the job queue?** Pub/Sub is fire-and-forget with no persistence or single-consumer semantics. It remains the right tool for *invalidation broadcast* after the Outbox job completes.
+
+See [Technology Stack](./Feature_Management_Service_Technology_Stack.md) §4.4 for table schema and implementation notes.
 
 ---
 
@@ -310,6 +332,8 @@ All APIs use JSON, `application/json`, ISO-8601 timestamps, and correlation via 
 ### 8.2 Config Sync API (`/v1/sync`)
 
 **Authentication**: API key or mTLS service identity.
+
+**Streaming**: version updates use **SSE only** (`GET /stream`). Clients that cannot hold a long-lived connection use `HEAD /version` or `GET /snapshot` on a schedule (not a separate streaming protocol).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -564,6 +588,13 @@ audit_events (
 environment_config (
   environment, current_version, updated_at
 )
+
+publish_jobs (
+  id, flag_key, environment, config_version,
+  payload_json, status,  -- pending | processing | completed | failed
+  attempt_count, max_attempts, locked_by, locked_at,
+  next_retry_at, error_message, created_at, completed_at
+)
 ```
 
 ### 11.2 Redis Keys
@@ -600,6 +631,7 @@ environment_config (
 | `fms_config_version_lag_seconds` | Gauge | P95 > 60s |
 | `fms_cache_hit_ratio` | Gauge | < 95% (L2) |
 | `fms_publish_duration_seconds` | Histogram | P95 > 5s |
+| `fms_publish_jobs_backlog` | Gauge | pending + failed jobs > threshold |
 | `fms_errors_total` | Counter | Error rate > 0.1% |
 
 **SDK-level** (client-reported):
@@ -619,7 +651,7 @@ environment_config (
 
 ### 12.4 Distributed Tracing Flows
 
-**Publish flow**: `Management API → PostgreSQL → Publish Worker → Redis → Pub/Sub`
+**Publish flow**: `Management API → PostgreSQL (Outbox) → Publish Worker → Redis → Pub/Sub`
 
 **Evaluate flow (remote)**: `Client → Evaluation API → Redis → Rule Engine`
 
@@ -683,7 +715,7 @@ flowchart TB
 | Config Sync API | HPA on CPU/connections | Long-lived SSE connections drive sizing |
 | Evaluation API | HPA on RPS | Stateless; primary remote eval path |
 | Explain API | Moderate replicas | Support traffic; not on hot path |
-| Publish Worker | Queue-based horizontal | Kafka/SQS job per publish |
+| Publish Worker | Horizontal via Outbox polling | `publish_jobs` row per publish; `FOR UPDATE SKIP LOCKED` |
 | Redis | Cluster mode | Shard by `env:appId` hash |
 | PostgreSQL | Vertical + read replicas | Read replicas for explain/history queries |
 
@@ -709,14 +741,14 @@ sequenceDiagram
     participant SDK as Client SDK
 
     PM->>Mgmt: POST publish checkout_v2
-    Mgmt->>DB: Commit version and audit
-    Mgmt->>Worker: Enqueue publish job
+    Mgmt->>DB: Commit version, audit, and publish_jobs (pending)
     Mgmt-->>PM: 202 Accepted version 1043
 
-    Worker->>DB: Load flag and rules
+    Worker->>DB: Claim job (SKIP LOCKED) and load flag/rules
     Worker->>Worker: Compile snapshot
     Worker->>Redis: SET snapshot and INCR version
     Worker->>Redis: PUBLISH invalidate prod channel
+    Worker->>DB: Mark publish_jobs completed
 
     SDK->>Redis: SSE poll detects version 1043
     SDK->>Mgmt: GET sync snapshot since 1042
@@ -764,7 +796,7 @@ sequenceDiagram
 | Rule engine core | Rust (shared via FFI/WASM) | Pure Go/Java with conformance tests |
 | Primary store | PostgreSQL 15+ | — |
 | Cache | Redis Cluster 7+ | KeyDB, Valkey |
-| Async publish | Kafka or SQS | NATS |
+| Async publish | PostgreSQL Outbox (`publish_jobs`) + Worker polling | — |
 | API gateway | Existing platform ingress + rate limiting | Kong, Envoy |
 | Identity | Corporate OIDC (Okta, Azure AD) | — |
 | Observability | OpenTelemetry Collector → Prometheus + Tempo + Loki | Datadog, cloud-native stacks |
@@ -793,7 +825,7 @@ Final stack selection should follow organizational standards; the architecture i
 | Redis unavailable | Sync/Eval API read from PostgreSQL (slower); SDK uses local snapshot |
 | PostgreSQL unavailable | Management writes fail; eval continues on cached snapshots |
 | Sync API down | SDK serves stale snapshot; metric `fms_sdk_degraded=1` |
-| Publish worker stuck | Alert on `config_version_lag`; manual replay from audit |
+| Publish worker stuck | Alert on `config_version_lag` and `fms_publish_jobs_backlog`; retry via `next_retry_at` or manual re-queue failed jobs |
 | Incomplete context | Return default value; `reasonCode: INCOMPLETE_CONTEXT` in explain |
 
 ---
@@ -814,16 +846,16 @@ Final stack selection should follow organizational standards; the architecture i
 | # | Decision | Options | Recommendation |
 |---|----------|---------|----------------|
 | 1 | Shared engine packaging | Rust core vs duplicated logic | Rust core + conformance test suite |
-| 2 | Streaming protocol | SSE vs gRPC stream vs WebSocket | SSE for web/server; gRPC for internal |
-| 3 | Delta precomputation | On-publish vs on-demand | On-publish for last N versions |
-| 4 | Segment storage | Inline JSON vs external segment service | Inline for MVP; external for large cohorts |
-| 5 | Mobile offline staleness | 5 / 15 / 60 min cap | 15 min default, configurable per app |
+| 2 | Delta precomputation | On-publish vs on-demand | On-publish for last N versions |
+| 3 | Segment storage | Inline JSON vs external segment service | Inline for MVP; external for large cohorts |
+| 4 | Mobile offline staleness | 5 / 15 / 60 min cap | 15 min default, configurable per app |
 
 ---
 
 ## 21. References
 
 - [Feature Management Service BRD](./Feature_Management_Service_BRD.md)
+- [Feature Management Service Technology Stack](./Feature_Management_Service_Technology_Stack.md)
 - [Align Expert Software Engineer R2 Quiz](./Align_Expert_Software_Engineer_R2_Quiz.md)
 - [C4 Model](https://c4model.com/)
 - [OpenTelemetry Specification](https://opentelemetry.io/docs/specs/otel/)

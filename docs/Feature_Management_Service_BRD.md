@@ -204,7 +204,7 @@ A unified FMS can materially reduce release risk, shorten incident recovery time
 |----|-------------|----------|
 | FR-60 | Evaluation path prioritizes **SDK/edge local cache** to avoid every request hitting the central service | P0 |
 | FR-61 | Central service uses tiered caching; as feature count grows, control memory via **incremental sync, sharding, and per-application subscriptions** | P0 |
-| FR-62 | Configuration changes invalidate via **version numbers + incremental push/long polling** to avoid full broadcast storms | P0 |
+| FR-62 | Configuration changes invalidate via **version numbers + SSE push** to avoid full broadcast storms | P0 |
 | FR-63 | Cache hit rate, origin rate, and per-node memory are monitorable with configurable alert thresholds | P0 |
 
 ### 7.8 Observability
