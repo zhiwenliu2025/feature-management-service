@@ -1,0 +1,19 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:0/realms/fms
+
+fms:
+  security:
+    oauth2:
+      enabled: false
+
+logging:
+  level:
+    com.fms: DEBUG
