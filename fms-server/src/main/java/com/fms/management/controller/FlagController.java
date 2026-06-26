@@ -1,6 +1,7 @@
-package com.fms.management;
+package com.fms.management.controller;
 
 import com.fms.common.api.PageResponse;
+import com.fms.management.service.FlagService;
 import com.fms.domain.enums.FlagStatus;
 import com.fms.management.dto.CreateFlagRequest;
 import com.fms.management.dto.FlagDetailResponse;

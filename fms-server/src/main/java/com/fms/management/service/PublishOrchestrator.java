@@ -1,4 +1,4 @@
-package com.fms.management;
+package com.fms.management.service;
 
 import com.fms.common.exception.FmsErrorCode;
 import com.fms.common.exception.FmsException;

@@ -1,6 +1,7 @@
-package com.fms.management;
+package com.fms.management.controller;
 
 import com.fms.management.dto.KillSwitchRequest;
+import com.fms.management.service.KillSwitchService;
 import com.fms.management.dto.KillSwitchResponse;
 import com.fms.management.security.RequiresScope;
 import com.fms.management.support.ManagementActorResolver;

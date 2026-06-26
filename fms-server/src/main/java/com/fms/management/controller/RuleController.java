@@ -1,9 +1,10 @@
-package com.fms.management;
+package com.fms.management.controller;
 
 import com.fms.management.dto.FlagDetailResponse;
 import com.fms.management.dto.ReplaceRulesRequest;
 import com.fms.management.dto.UpdateRuleRequest;
 import com.fms.management.security.RequiresScope;
+import com.fms.management.service.RuleService;
 import com.fms.management.support.ManagementActorResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

@@ -1,4 +1,4 @@
-package com.fms.management;
+package com.fms.management.controller;
 
 import com.fms.common.api.PageResponse;
 import com.fms.management.dto.CreateReleaseRequest;
@@ -6,6 +6,7 @@ import com.fms.management.dto.LinkFlagsRequest;
 import com.fms.management.dto.ReleaseDetailResponse;
 import com.fms.management.dto.ReleaseResponse;
 import com.fms.management.security.RequiresScope;
+import com.fms.management.service.ReleaseService;
 import com.fms.management.support.ManagementActorResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

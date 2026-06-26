@@ -1,6 +1,7 @@
-package com.fms.management;
+package com.fms.management.controller;
 
 import com.fms.management.dto.EnvironmentConfigResponse;
+import com.fms.management.service.EnvironmentManagementService;
 import com.fms.management.dto.EnvironmentResponse;
 import com.fms.management.dto.PromoteRequest;
 import com.fms.management.dto.PromoteResponse;

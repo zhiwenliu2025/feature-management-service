@@ -1,6 +1,7 @@
-package com.fms.management;
+package com.fms.management.controller;
 
 import com.fms.common.api.PageResponse;
+import com.fms.management.service.AuditQueryService;
 import com.fms.domain.enums.AuditAction;
 import com.fms.management.dto.AuditEventResponse;
 import com.fms.management.security.RequiresScope;
