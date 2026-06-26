@@ -15,12 +15,13 @@ dependencies {
     implementation(libs.spring.boot.starter.oauth2.resource.server)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.aspectj)
     implementation(libs.spring.boot.flyway)
     implementation(libs.springdoc.openapi)
     implementation(libs.caffeine)
     implementation(libs.flyway.core)
     implementation(libs.flyway.database.postgresql)
-    runtimeOnly(libs.postgresql)
+    implementation(libs.postgresql)
 
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor:4.1.0")
 

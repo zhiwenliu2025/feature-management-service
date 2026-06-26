@@ -1,11 +1,11 @@
 package com.fms.domain;
 
+import com.fms.domain.converter.FlagTypeConverter;
 import com.fms.domain.enums.FlagStatus;
 import com.fms.domain.enums.FlagType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -45,7 +45,7 @@ public class FeatureFlagEntity {
     @Column(columnDefinition = "text")
     private String description;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = FlagTypeConverter.class)
     @Column(nullable = false, length = 32)
     private FlagType type = FlagType.boolean_;
 
@@ -53,7 +53,7 @@ public class FeatureFlagEntity {
     @Column(name = "default_value", nullable = false, columnDefinition = "jsonb")
     private Object defaultValue;
 
-    @Enumerated(EnumType.STRING)
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
     @Column(nullable = false, length = 32)
     private FlagStatus status = FlagStatus.draft;
 
@@ -166,5 +166,13 @@ public class FeatureFlagEntity {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(String updatedBy) {
+        this.updatedBy = updatedBy;
     }
 }
