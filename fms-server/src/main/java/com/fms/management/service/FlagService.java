@@ -122,14 +122,24 @@ public class FlagService {
             String appId, String tag, FlagStatus status, String search, int limit, String cursor) {
         int pageSize = Math.min(Math.max(limit, 1), MAX_PAGE);
         CursorCodec.Cursor decoded = CursorCodec.decode(cursor);
-        List<FeatureFlagEntity> flags = featureFlagRepository.searchFlags(
-                appId,
-                status == null ? null : status.name(),
-                blankToNull(search),
-                blankToNull(tag),
-                decoded == null ? null : decoded.createdAt(),
-                decoded == null ? null : decoded.id().toString(),
-                pageSize + 1);
+        List<FeatureFlagEntity> flags;
+        if (decoded == null) {
+            flags = featureFlagRepository.searchFlags(
+                    appId,
+                    status == null ? null : status.name(),
+                    blankToNull(search),
+                    blankToNull(tag),
+                    pageSize + 1);
+        } else {
+            flags = featureFlagRepository.searchFlagsAfterCursor(
+                    appId,
+                    status == null ? null : status.name(),
+                    blankToNull(search),
+                    blankToNull(tag),
+                    decoded.createdAt(),
+                    decoded.id().toString(),
+                    pageSize + 1);
+        }
 
         boolean hasMore = flags.size() > pageSize;
         if (hasMore) {

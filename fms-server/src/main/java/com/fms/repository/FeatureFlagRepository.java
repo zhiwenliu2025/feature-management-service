@@ -28,14 +28,33 @@ public interface FeatureFlagRepository extends JpaRepository<FeatureFlagEntity, 
                     JOIN tags t ON t.id = fft.tag_id
                     WHERE fft.flag_id = f.id AND t.name = :tag
               ))
-              AND (
-                :cursorCreatedAt IS NULL
-                OR (f.created_at, f.id) < (:cursorCreatedAt::timestamptz, :cursorId::uuid)
-              )
             ORDER BY f.created_at DESC, f.id DESC
             LIMIT :limit
             """, nativeQuery = true)
     List<FeatureFlagEntity> searchFlags(
+            @Param("appId") String appId,
+            @Param("status") String status,
+            @Param("search") String search,
+            @Param("tag") String tag,
+            @Param("limit") int limit);
+
+    @Query(value = """
+            SELECT f.* FROM feature_flags f
+            JOIN applications a ON a.id = f.application_id
+            WHERE a.slug = :appId
+              AND (:status IS NULL OR f.status = :status)
+              AND (:search IS NULL OR lower(f.name) LIKE lower('%' || :search || '%')
+                   OR lower(f.key) LIKE lower('%' || :search || '%'))
+              AND (:tag IS NULL OR EXISTS (
+                    SELECT 1 FROM feature_flag_tags fft
+                    JOIN tags t ON t.id = fft.tag_id
+                    WHERE fft.flag_id = f.id AND t.name = :tag
+              ))
+              AND (f.created_at, f.id) < (:cursorCreatedAt, CAST(:cursorId AS uuid))
+            ORDER BY f.created_at DESC, f.id DESC
+            LIMIT :limit
+            """, nativeQuery = true)
+    List<FeatureFlagEntity> searchFlagsAfterCursor(
             @Param("appId") String appId,
             @Param("status") String status,
             @Param("search") String search,
