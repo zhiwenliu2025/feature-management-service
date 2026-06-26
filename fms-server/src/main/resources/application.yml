@@ -58,6 +58,11 @@ fms:
   security:
     oauth2:
       enabled: false
+  sync:
+    delta-max-gap: 100
+    snapshot-ttl: 24h
+    sse-heartbeat-interval-ms: 30000
+    sse-timeout: 1h
   worker:
     publish:
       poll-interval-ms: 5000
