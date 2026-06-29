@@ -137,6 +137,23 @@ class DefaultRuleEngineTest {
         assertFalse(DefaultRuleEngine.computeEnabled("string", "variant_a", ReasonCode.DEFAULT_VALUE));
     }
 
+    @Test
+    void explainIncludesEnvironmentAndRuleTrace() {
+        Map<String, Object> conditions = Map.of(
+                "region", Map.of("operator", "in", "values", List.of("US")));
+
+        ExplainResult result = engine.explain(
+                "flag_a",
+                sampleContext("US"),
+                publishedFlag(false, "published", List.of(rule(10, conditions, true))));
+
+        assertEquals(ReasonCode.RULE_MATCH, result.reasonCode());
+        assertEquals(2, result.decisionTrace().size());
+        assertEquals("environment_check", result.decisionTrace().get(0).step());
+        assertEquals("rule_evaluation", result.decisionTrace().get(1).step());
+        assertEquals("match", result.decisionTrace().get(1).result());
+    }
+
     private static EvaluationContext sampleContext(String region) {
         return new EvaluationContext("usr_1", null, region, "3.2.1", Map.of());
     }

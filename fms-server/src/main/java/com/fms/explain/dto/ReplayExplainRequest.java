@@ -1,15 +1,17 @@
 package com.fms.explain.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 
 public record ReplayExplainRequest(
-        String environment,
-        String appId,
+        @NotBlank String environment,
+        @NotBlank String appId,
         Long configVersion,
         Instant timestamp,
-        ExplainRequest.EvaluateContextDto context,
+        @NotNull @Valid ExplainRequest.EvaluateContextDto context,
         boolean includeCustomAttributes
 ) {
 }

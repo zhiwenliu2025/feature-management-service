@@ -1,6 +1,8 @@
 package com.fms.ruleengine;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -131,5 +133,90 @@ final class ConditionMatcher {
 
     private static String stringValue(Object value) {
         return value == null ? null : String.valueOf(value);
+    }
+
+    static String describeMatch(
+            Map<String, Object> conditions,
+            EvaluationContext context,
+            String flagKey,
+            String rolloutSalt) {
+        if (conditions == null || conditions.isEmpty()) {
+            return "no conditions";
+        }
+
+        List<String> parts = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : conditions.entrySet()) {
+            String field = entry.getKey();
+            Object condition = entry.getValue();
+
+            if ("rolloutPercent".equals(field)) {
+                Number percent = condition instanceof Number number
+                        ? number
+                        : condition instanceof Map<?, ?> map && map.get("value") instanceof Number value
+                                ? value
+                                : null;
+                if (percent != null) {
+                    String bucketingKey = context.userId() != null && !context.userId().isBlank()
+                            ? context.userId()
+                            : context.deviceId();
+                    int bucket = MurmurHash3.bucket(flagKey, bucketingKey, rolloutSalt);
+                    int threshold = (int) Math.round(percent.doubleValue() * 100);
+                    parts.add("bucket " + bucket + " < " + threshold + " (" + percent + "%)");
+                }
+                continue;
+            }
+
+            if (!(condition instanceof Map<?, ?> conditionMap)) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> typedCondition = (Map<String, Object>) conditionMap;
+
+            if ("customAttributes".equals(field)) {
+                typedCondition.forEach((key, value) -> {
+                    if (value instanceof Map<?, ?> attrCondition) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> typed = (Map<String, Object>) attrCondition;
+                        Object actual = context.customAttributes() == null ? null : context.customAttributes().get(key);
+                        parts.add(key + " " + stringValue(actual) + " "
+                                + typed.getOrDefault("operator", "eq") + " " + typed.get("value"));
+                    }
+                });
+                continue;
+            }
+
+            if ("segment".equals(field)) {
+                parts.add("segment not supported");
+                continue;
+            }
+
+            String actual = resolveField(field, context);
+            String operator = String.valueOf(typedCondition.getOrDefault("operator", "eq"));
+            if ("in".equals(operator) || "not_in".equals(operator)) {
+                parts.add(field + " " + stringValue(actual) + " " + operator + " " + typedCondition.get("values"));
+            } else {
+                parts.add(field + " " + stringValue(actual) + " " + operator + " " + typedCondition.get("value"));
+            }
+        }
+        return String.join("; ", parts);
+    }
+
+    static Integer resolveBucket(Map<String, Object> conditions, EvaluationContext context, String flagKey, String rolloutSalt) {
+        if (conditions == null) {
+            return null;
+        }
+        Object rollout = conditions.get("rolloutPercent");
+        if (rollout == null) {
+            return null;
+        }
+        String bucketingKey = context.userId() != null && !context.userId().isBlank()
+                ? context.userId()
+                : context.deviceId() != null && !context.deviceId().isBlank()
+                        ? context.deviceId()
+                        : null;
+        if (bucketingKey == null) {
+            return null;
+        }
+        return MurmurHash3.bucket(flagKey, bucketingKey, rolloutSalt);
     }
 }

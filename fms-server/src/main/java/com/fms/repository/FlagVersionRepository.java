@@ -49,4 +49,7 @@ public interface FlagVersionRepository extends JpaRepository<FlagVersionEntity, 
             @Param("environment") String environment,
             @Param("configVersion") long configVersion,
             @Param("flagIds") List<UUID> flagIds);
+
+    Optional<FlagVersionEntity> findTopByFlag_Application_SlugAndFlag_KeyAndEnvironmentAndConfigVersionOrderByFlagVersionDesc(
+            String appId, String flagKey, String environment, long configVersion);
 }
