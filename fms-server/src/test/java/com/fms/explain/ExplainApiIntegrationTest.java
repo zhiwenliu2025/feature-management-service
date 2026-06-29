@@ -31,7 +31,7 @@ class ExplainApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 false);
 
         mockMvc.perform(post("/api/v1/explain/flags/{flagKey}", flagKey)
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -59,7 +59,7 @@ class ExplainApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 false);
 
         mockMvc.perform(post("/api/v1/explain/flags/{flagKey}", "missing_flag")
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -79,7 +79,7 @@ class ExplainApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 false);
 
         mockMvc.perform(post("/api/v1/explain/flags/{flagKey}", flagKey)
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -103,7 +103,7 @@ class ExplainApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 false);
 
         mockMvc.perform(post("/api/v1/explain/flags/{flagKey}", flagKey)
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -132,7 +132,7 @@ class ExplainApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 false);
 
         mockMvc.perform(post("/api/v1/explain/flags/{flagKey}", flagKey)
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -158,7 +158,7 @@ class ExplainApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 false);
 
         mockMvc.perform(post("/api/v1/explain/flags/{flagKey}/replay", flagKey)
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -182,7 +182,7 @@ class ExplainApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 false);
 
         mockMvc.perform(post("/api/v1/explain/flags/{flagKey}/replay", flagKey)
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())

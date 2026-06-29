@@ -9,11 +9,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 
@@ -66,6 +68,23 @@ public class GlobalExceptionHandler {
                         "Request validation failed.",
                         request.getHeader(RequestContextFilter.REQUEST_ID_HEADER),
                         details));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    ResponseEntity<ErrorResponse> handleNotFound(NoResourceFoundException ex, HttpServletRequest request) {
+        String path = request.getRequestURI();
+        if (path != null && path.endsWith("/favicon.ico")) {
+            log.debug("Static resource not found path={}", path);
+        } else {
+            log.debug("No handler for path={}", path);
+        }
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of(
+                        "NOT_FOUND",
+                        "Resource not found.",
+                        request.getHeader(RequestContextFilter.REQUEST_ID_HEADER),
+                        null));
     }
 
     @ExceptionHandler(Exception.class)

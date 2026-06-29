@@ -91,8 +91,8 @@ The server listens on **http://localhost:8080** by default.
 ### 4. Verify
 
 ```bash
-curl http://localhost:8080/health
-curl http://localhost:8080/ready
+curl http://localhost:8080/api/health
+curl http://localhost:8080/api/ready
 ```
 
 Open **http://localhost:8080/swagger-ui.html** for interactive API docs.
@@ -101,13 +101,13 @@ Open **http://localhost:8080/swagger-ui.html** for interactive API docs.
 
 | Module | Base path | Auth |
 |--------|-----------|------|
-| Platform | `/health`, `/ready`, `/v1/openapi.json` | None |
-| Management | `/v1/management` | OAuth2 OIDC + RBAC |
-| Config Sync | `/v1/sync` | API key / mTLS |
-| Evaluation | `/v1/evaluate` | API key / mTLS |
-| Explain | `/v1/explain` | API key + `explain:read` |
+| Platform | `/api/health`, `/api/ready`, `/api/v1/openapi.json` | None |
+| Management | `/api/v1/management` | OAuth2 OIDC + RBAC |
+| Config Sync | `/api/v1/sync` | API key / mTLS |
+| Evaluation | `/api/v1/evaluate` | API key / mTLS |
+| Explain | `/api/v1/explain` | API key + `explain:read` |
 
-Full contract: [API Design](docs/Feature_Management_Service_API_Design.md) · live OpenAPI at `/v1/openapi.json`
+Full contract: [API Design](docs/Feature_Management_Service_API_Design.md) · live OpenAPI at `/api/v1/openapi.json`
 
 ### RBAC roles (management plane)
 

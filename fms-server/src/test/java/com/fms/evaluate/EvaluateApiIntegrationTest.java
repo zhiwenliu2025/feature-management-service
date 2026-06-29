@@ -31,7 +31,7 @@ class EvaluateApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 new EvaluateRequest.EvaluationContextDto("usr_123", null, "US", "3.2.1", Map.of()));
 
         mockMvc.perform(post("/api/v1/evaluate/flags/{flagKey}", flagKey)
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -60,7 +60,7 @@ class EvaluateApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 new EvaluateRequest.EvaluationContextDto("usr_123", null, "EU", "3.2.1", Map.of()));
 
         mockMvc.perform(post("/api/v1/evaluate/flags/{flagKey}", flagKey)
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -78,7 +78,7 @@ class EvaluateApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 new EvaluateRequest.EvaluationContextDto("usr_123", null, "US", null, Map.of()));
 
         mockMvc.perform(post("/api/v1/evaluate/flags/{flagKey}", "does_not_exist")
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -98,7 +98,7 @@ class EvaluateApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 new EvaluateRequest.EvaluationContextDto("usr_123", null, "US", null, Map.of()));
 
         mockMvc.perform(post("/api/v1/evaluate/flags/{flagKey}", flagKey)
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -125,7 +125,7 @@ class EvaluateApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 new EvaluateRequest.EvaluationContextDto("usr_123", null, "US", "3.2.1", Map.of()));
 
         mockMvc.perform(post("/api/v1/evaluate/batch")
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -152,7 +152,7 @@ class EvaluateApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 new EvaluateRequest.EvaluationContextDto("usr_123", null, "US", null, Map.of()));
 
         mockMvc.perform(post("/api/v1/evaluate/batch")
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -162,7 +162,7 @@ class EvaluateApiIntegrationTest extends EvaluateIntegrationTestSupport {
     @Test
     void evaluateRequiresEnvironmentAppIdAndContext() throws Exception {
         mockMvc.perform(post("/api/v1/evaluate/flags/{flagKey}", "any_flag")
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())
@@ -184,7 +184,7 @@ class EvaluateApiIntegrationTest extends EvaluateIntegrationTestSupport {
                 new EvaluateRequest.EvaluationContextDto("usr_123", null, "US", "3.2.1", Map.of()));
 
         mockMvc.perform(post("/api/v1/evaluate/flags/{flagKey}", flagKey)
-                        .header(API_KEY_HEADER, API_KEY_VALUE)
+                        .header(API_KEY_HEADER, apiKeyAuthorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())

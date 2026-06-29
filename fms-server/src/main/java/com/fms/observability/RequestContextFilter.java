@@ -21,7 +21,7 @@ import java.util.UUID;
  * Propagates correlation IDs and safe request context into the logging MDC.
  * # SECURITY-REVIEW: Never place userId or other PII in MDC.
  */
-@Component
+@Component("fmsRequestContextFilter")
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestContextFilter extends OncePerRequestFilter {
 
