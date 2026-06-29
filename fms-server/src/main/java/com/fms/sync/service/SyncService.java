@@ -4,6 +4,7 @@ import com.fms.cache.SnapshotCacheService;
 import com.fms.common.exception.FmsErrorCode;
 import com.fms.common.exception.FmsException;
 import com.fms.config.FmsSyncProperties;
+import com.fms.observability.FmsMetrics;
 import com.fms.sync.dto.SnapshotResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -16,14 +17,17 @@ public class SyncService {
     private final SnapshotCacheService snapshotCacheService;
     private final SnapshotLoaderService snapshotLoaderService;
     private final FmsSyncProperties syncProperties;
+    private final FmsMetrics metrics;
 
     public SyncService(
             SnapshotCacheService snapshotCacheService,
             SnapshotLoaderService snapshotLoaderService,
-            FmsSyncProperties syncProperties) {
+            FmsSyncProperties syncProperties,
+            FmsMetrics metrics) {
         this.snapshotCacheService = snapshotCacheService;
         this.snapshotLoaderService = snapshotLoaderService;
         this.syncProperties = syncProperties;
+        this.metrics = metrics;
     }
 
     public SnapshotResult getSnapshot(String environment, String appId, Long sinceVersion, String ifNoneMatch) {
@@ -31,15 +35,19 @@ public class SyncService {
         String etag = buildEtag(environment, appId, currentVersion);
 
         if (matchesEtag(ifNoneMatch, etag) || (sinceVersion != null && sinceVersion >= currentVersion)) {
+            metrics.recordSyncRequest("not_modified", "none", "success");
             return SnapshotResult.notModified(currentVersion, etag);
         }
 
         if (sinceVersion == null || sinceVersion <= 0) {
-            return SnapshotResult.ok(loadFullSnapshot(environment, appId, currentVersion), etag);
+            LoadedSnapshot loaded = loadFullSnapshot(environment, appId, currentVersion);
+            metrics.recordSyncRequest("full", loaded.cacheTier(), "success");
+            return SnapshotResult.ok(loaded.snapshot(), etag);
         }
 
         long versionGap = currentVersion - sinceVersion;
         if (versionGap > syncProperties.deltaMaxGap()) {
+            metrics.recordSyncRequest("delta", "none", "gap_too_large");
             throw new FmsException(
                     FmsErrorCode.DELTA_VERSION_GAP_TOO_LARGE,
                     "Requested sinceVersion is outside the retention window; request a full snapshot.");
@@ -49,6 +57,8 @@ public class SyncService {
                 environment, appId, sinceVersion, currentVersion);
         SnapshotResponse delta = cachedDelta.orElseGet(() -> snapshotLoaderService.loadDeltaSnapshot(
                 environment, appId, sinceVersion, currentVersion));
+        String cacheTier = cachedDelta.isPresent() ? "redis" : "postgres";
+        metrics.recordSyncRequest("delta", cacheTier, "success");
         return SnapshotResult.ok(delta, buildEtag(environment, appId, delta.configVersion()));
     }
 
@@ -74,20 +84,28 @@ public class SyncService {
         return snapshotCacheService.registerSseListener(environment, appId);
     }
 
-    private SnapshotResponse loadFullSnapshot(String environment, String appId, long currentVersion) {
+    private LoadedSnapshot loadFullSnapshot(String environment, String appId, long currentVersion) {
         if (currentVersion <= 0) {
-            return new SnapshotResponse(
-                    environment,
-                    appId,
-                    0L,
-                    null,
-                    "full",
-                    java.time.Instant.now(),
-                    java.util.List.of(),
-                    java.util.List.of());
+            return new LoadedSnapshot(
+                    new SnapshotResponse(
+                            environment,
+                            appId,
+                            0L,
+                            null,
+                            "full",
+                            java.time.Instant.now(),
+                            java.util.List.of(),
+                            java.util.List.of()),
+                    "none");
         }
-        return snapshotCacheService.getSnapshot(environment, appId, currentVersion)
-                .orElseGet(() -> snapshotLoaderService.loadFullSnapshot(environment, appId));
+        Optional<SnapshotResponse> cached = snapshotCacheService.getSnapshot(environment, appId, currentVersion);
+        if (cached.isPresent()) {
+            return new LoadedSnapshot(cached.get(), "redis");
+        }
+        return new LoadedSnapshot(snapshotLoaderService.loadFullSnapshot(environment, appId), "postgres");
+    }
+
+    private record LoadedSnapshot(SnapshotResponse snapshot, String cacheTier) {
     }
 
     private static boolean matchesEtag(String ifNoneMatch, String etag) {

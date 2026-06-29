@@ -3,6 +3,7 @@ package com.fms.cache;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fms.config.FmsSyncProperties;
+import com.fms.observability.FmsMetrics;
 import com.fms.sync.service.SseStreamManager;
 import com.fms.sync.dto.SnapshotResponse;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,18 +26,21 @@ public class SnapshotCacheService {
     private final ObjectMapper objectMapper;
     private final FmsSyncProperties syncProperties;
     private final SseStreamManager sseStreamManager;
+    private final FmsMetrics metrics;
 
     public SnapshotCacheService(
             StringRedisTemplate redisTemplate,
             SnapshotCodec snapshotCodec,
             ObjectMapper objectMapper,
             FmsSyncProperties syncProperties,
-            SseStreamManager sseStreamManager) {
+            SseStreamManager sseStreamManager,
+            FmsMetrics metrics) {
         this.redisTemplate = redisTemplate;
         this.snapshotCodec = snapshotCodec;
         this.objectMapper = objectMapper;
         this.syncProperties = syncProperties;
         this.sseStreamManager = sseStreamManager;
+        this.metrics = metrics;
     }
 
     public long getCurrentVersion(String environment, String appId) {
@@ -58,16 +62,20 @@ public class SnapshotCacheService {
     public Optional<SnapshotResponse> getSnapshot(String environment, String appId, long version) {
         String encoded = redisTemplate.opsForValue().get(RedisKeys.appSnapshot(environment, appId, version));
         if (encoded == null) {
+            metrics.recordRedisCacheMiss("snapshot");
             return Optional.empty();
         }
+        metrics.recordRedisCacheHit("snapshot");
         return Optional.of(toSnapshotResponse(snapshotCodec.decode(encoded)));
     }
 
     public Optional<SnapshotResponse> getDelta(String environment, String appId, long fromVersion, long toVersion) {
         String encoded = redisTemplate.opsForValue().get(RedisKeys.appDelta(environment, appId, fromVersion, toVersion));
         if (encoded == null) {
+            metrics.recordRedisCacheMiss("delta");
             return Optional.empty();
         }
+        metrics.recordRedisCacheHit("delta");
         return Optional.of(toSnapshotResponse(snapshotCodec.decode(encoded)));
     }
 

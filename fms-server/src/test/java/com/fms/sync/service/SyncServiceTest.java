@@ -4,7 +4,9 @@ import com.fms.cache.SnapshotCacheService;
 import com.fms.common.exception.FmsErrorCode;
 import com.fms.common.exception.FmsException;
 import com.fms.config.FmsSyncProperties;
+import com.fms.observability.FmsMetrics;
 import com.fms.sync.dto.SnapshotResponse;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +42,11 @@ class SyncServiceTest {
     void setUp() {
         FmsSyncProperties properties = new FmsSyncProperties();
         properties.setDeltaMaxGap(5);
-        syncService = new SyncService(snapshotCacheService, snapshotLoaderService, properties);
+        syncService = new SyncService(
+                snapshotCacheService,
+                snapshotLoaderService,
+                properties,
+                new FmsMetrics(new SimpleMeterRegistry()));
     }
 
     @Test

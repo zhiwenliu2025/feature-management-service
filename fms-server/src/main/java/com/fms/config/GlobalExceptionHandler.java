@@ -3,9 +3,12 @@ package com.fms.config;
 import com.fms.common.api.ErrorResponse;
 import com.fms.common.exception.FmsErrorCode;
 import com.fms.common.exception.FmsException;
+import com.fms.observability.FmsMetrics;
+import com.fms.observability.RequestContextFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -19,9 +22,26 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    private final FmsMetrics metrics;
+
+    public GlobalExceptionHandler(FmsMetrics metrics) {
+        this.metrics = metrics;
+    }
+
     @ExceptionHandler(FmsException.class)
     ResponseEntity<ErrorResponse> handleFmsException(FmsException ex, HttpServletRequest request) {
-        String requestId = request.getHeader("X-Request-Id");
+        String requestId = request.getHeader(RequestContextFilter.REQUEST_ID_HEADER);
+        String module = MDC.get(RequestContextFilter.MDC_MODULE);
+        metrics.recordError(ex.errorCode().name(), module == null ? "unknown" : module);
+
+        if (ex.errorCode().httpStatus() >= 500) {
+            log.error("Request failed requestId={} errorCode={} path={}",
+                    requestId, ex.errorCode().name(), request.getRequestURI(), ex);
+        } else {
+            log.warn("Request rejected requestId={} errorCode={} path={} message={}",
+                    requestId, ex.errorCode().name(), request.getRequestURI(), ex.getMessage());
+        }
+
         return ResponseEntity
                 .status(ex.errorCode().httpStatus())
                 .body(ErrorResponse.of(
@@ -33,6 +53,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        String module = MDC.get(RequestContextFilter.MDC_MODULE);
+        metrics.recordError(FmsErrorCode.VALIDATION_ERROR.name(), module == null ? "unknown" : module);
+
         List<ErrorResponse.ErrorDetail> details = ex.getBindingResult().getFieldErrors().stream()
                 .map(this::toDetail)
                 .toList();
@@ -41,19 +64,24 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(
                         FmsErrorCode.VALIDATION_ERROR.name(),
                         "Request validation failed.",
-                        request.getHeader("X-Request-Id"),
+                        request.getHeader(RequestContextFilter.REQUEST_ID_HEADER),
                         details));
     }
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
-        log.error("Unhandled exception", ex);
+        String module = MDC.get(RequestContextFilter.MDC_MODULE);
+        metrics.recordError(FmsErrorCode.INTERNAL_ERROR.name(), module == null ? "unknown" : module);
+        log.error("Unhandled exception requestId={} path={}",
+                request.getHeader(RequestContextFilter.REQUEST_ID_HEADER),
+                request.getRequestURI(),
+                ex);
         return ResponseEntity
                 .internalServerError()
                 .body(ErrorResponse.of(
                         FmsErrorCode.INTERNAL_ERROR.name(),
                         "An unexpected error occurred.",
-                        request.getHeader("X-Request-Id"),
+                        request.getHeader(RequestContextFilter.REQUEST_ID_HEADER),
                         null));
     }
 

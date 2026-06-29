@@ -20,6 +20,7 @@ import com.fms.ruleengine.ReasonCode;
 import com.fms.ruleengine.RuleEngine;
 import com.fms.ruleengine.TraceStep;
 import com.fms.security.DataPlaneAuthzService;
+import com.fms.observability.FmsMetrics;
 import com.fms.sync.dto.SnapshotResponse;
 import com.fms.sync.service.SnapshotLoaderService;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,6 +78,9 @@ class ExplainServiceTest {
     @Mock
     private DataPlaneAuthzService dataPlaneAuthzService;
 
+    @Mock
+    private FmsMetrics metrics;
+
     private ExplainService explainService;
 
     @BeforeEach
@@ -90,7 +94,8 @@ class ExplainServiceTest {
                 releaseRepository,
                 configVersionHistoryRepository,
                 flagVersionRepository,
-                dataPlaneAuthzService);
+                dataPlaneAuthzService,
+                metrics);
     }
 
     @Test

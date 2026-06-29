@@ -15,6 +15,8 @@ dependencies {
     implementation(libs.spring.boot.starter.oauth2.resource.server)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.opentelemetry)
+    implementation(libs.micrometer.registry.prometheus)
     implementation(libs.spring.boot.starter.aspectj)
     implementation(libs.spring.boot.flyway)
     implementation(libs.springdoc.openapi)

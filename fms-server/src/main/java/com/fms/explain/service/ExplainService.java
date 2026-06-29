@@ -20,9 +20,11 @@ import com.fms.ruleengine.ExplainResult;
 import com.fms.ruleengine.ReasonCode;
 import com.fms.ruleengine.RuleEngine;
 import com.fms.ruleengine.TraceStep;
+import com.fms.observability.FmsMetrics;
 import com.fms.security.DataPlaneAuthzService;
 import com.fms.sync.dto.SnapshotResponse;
 import com.fms.sync.service.SnapshotLoaderService;
+import io.micrometer.observation.annotation.Observed;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +50,7 @@ public class ExplainService {
     private final ConfigVersionHistoryRepository configVersionHistoryRepository;
     private final FlagVersionRepository flagVersionRepository;
     private final DataPlaneAuthzService dataPlaneAuthzService;
+    private final FmsMetrics metrics;
 
     public ExplainService(
             RuleEngine ruleEngine,
@@ -58,7 +61,8 @@ public class ExplainService {
             ReleaseRepository releaseRepository,
             ConfigVersionHistoryRepository configVersionHistoryRepository,
             FlagVersionRepository flagVersionRepository,
-            DataPlaneAuthzService dataPlaneAuthzService) {
+            DataPlaneAuthzService dataPlaneAuthzService,
+            FmsMetrics metrics) {
         this.ruleEngine = ruleEngine;
         this.snapshotCacheService = snapshotCacheService;
         this.snapshotLoaderService = snapshotLoaderService;
@@ -68,10 +72,13 @@ public class ExplainService {
         this.configVersionHistoryRepository = configVersionHistoryRepository;
         this.flagVersionRepository = flagVersionRepository;
         this.dataPlaneAuthzService = dataPlaneAuthzService;
+        this.metrics = metrics;
     }
 
+    @Observed(name = "fms.explain", contextualName = "explain-flag")
     @Transactional(readOnly = true)
     public ExplainResponse explain(String flagKey, ExplainRequest request) {
+        metrics.recordExplainRequest("live");
         if (request.includeCustomAttributes()) {
             dataPlaneAuthzService.requireScope("explain:pii");
         }
@@ -90,8 +97,10 @@ public class ExplainService {
                 "live");
     }
 
+    @Observed(name = "fms.explain.replay", contextualName = "explain-replay")
     @Transactional(readOnly = true)
     public ExplainResponse replay(String flagKey, ReplayExplainRequest request) {
+        metrics.recordExplainRequest("replay");
         if (request.includeCustomAttributes()) {
             dataPlaneAuthzService.requireScope("explain:pii");
         }

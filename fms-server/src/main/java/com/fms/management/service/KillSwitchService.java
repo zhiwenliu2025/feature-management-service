@@ -9,6 +9,7 @@ import com.fms.domain.enums.KillSwitchScope;
 import com.fms.management.dto.KillSwitchRequest;
 import com.fms.management.dto.KillSwitchResponse;
 import com.fms.management.support.AuditRecorder;
+import com.fms.observability.FmsMetrics;
 import com.fms.repository.EnvironmentConfigRepository;
 import com.fms.repository.EnvironmentRepository;
 import com.fms.repository.KillSwitchOverrideRepository;
@@ -27,18 +28,21 @@ public class KillSwitchService {
     private final EnvironmentConfigRepository environmentConfigRepository;
     private final FlagService flagService;
     private final AuditRecorder auditRecorder;
+    private final FmsMetrics metrics;
 
     public KillSwitchService(
             KillSwitchOverrideRepository killSwitchOverrideRepository,
             EnvironmentRepository environmentRepository,
             EnvironmentConfigRepository environmentConfigRepository,
             FlagService flagService,
-            AuditRecorder auditRecorder) {
+            AuditRecorder auditRecorder,
+            FmsMetrics metrics) {
         this.killSwitchOverrideRepository = killSwitchOverrideRepository;
         this.environmentRepository = environmentRepository;
         this.environmentConfigRepository = environmentConfigRepository;
         this.flagService = flagService;
         this.auditRecorder = auditRecorder;
+        this.metrics = metrics;
     }
 
     @Transactional
@@ -64,6 +68,7 @@ public class KillSwitchService {
 
         auditRecorder.record(actor, AuditAction.kill_switch_on, "feature_flag", flagKey, request.environment(), requestId,
                 Map.of("scope", request.scope(), "comment", request.comment() == null ? "" : request.comment()));
+        metrics.recordKillSwitchActivation(request.environment(), request.scope());
 
         return toResponse(flagKey, saved, configVersion);
     }

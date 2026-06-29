@@ -21,4 +21,9 @@ public interface PublishJobRepository extends JpaRepository<PublishJobEntity, Lo
 
     boolean existsByFlag_IdAndEnvironmentAndStatus(
             java.util.UUID flagId, String environment, PublishJobStatus status);
+
+    long countByStatus(PublishJobStatus status);
+
+    List<PublishJobEntity> findByStatusAndEnvironmentOrderByCreatedAtAsc(
+            PublishJobStatus status, String environment, Pageable pageable);
 }

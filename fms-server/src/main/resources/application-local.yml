@@ -16,6 +16,16 @@ fms:
     api-key:
       enforced: false
 
+management:
+  tracing:
+    sampling:
+      probability: 0.0
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:0
+
 logging:
   level:
     com.fms: DEBUG

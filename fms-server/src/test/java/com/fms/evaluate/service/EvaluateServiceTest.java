@@ -5,6 +5,7 @@ import com.fms.common.exception.FmsErrorCode;
 import com.fms.common.exception.FmsException;
 import com.fms.evaluate.dto.BatchEvaluateRequest;
 import com.fms.evaluate.dto.EvaluateRequest;
+import com.fms.observability.FmsMetrics;
 import com.fms.repository.FeatureFlagRepository;
 import com.fms.ruleengine.EvaluationContext;
 import com.fms.ruleengine.EvaluationResult;
@@ -12,6 +13,7 @@ import com.fms.ruleengine.ReasonCode;
 import com.fms.ruleengine.RuleEngine;
 import com.fms.sync.dto.SnapshotResponse;
 import com.fms.sync.service.SnapshotLoaderService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,7 +55,11 @@ class EvaluateServiceTest {
     @BeforeEach
     void setUp() {
         evaluateService = new EvaluateService(
-                ruleEngine, snapshotCacheService, snapshotLoaderService, featureFlagRepository);
+                ruleEngine,
+                snapshotCacheService,
+                snapshotLoaderService,
+                featureFlagRepository,
+                new FmsMetrics(new SimpleMeterRegistry()));
     }
 
     @Test

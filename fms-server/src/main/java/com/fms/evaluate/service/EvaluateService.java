@@ -8,6 +8,7 @@ import com.fms.evaluate.dto.BatchEvaluateResponse;
 import com.fms.evaluate.dto.BatchFlagResult;
 import com.fms.evaluate.dto.EvaluateRequest;
 import com.fms.evaluate.dto.EvaluateResponse;
+import com.fms.observability.FmsMetrics;
 import com.fms.repository.FeatureFlagRepository;
 import com.fms.ruleengine.EvaluationContext;
 import com.fms.ruleengine.EvaluationResult;
@@ -15,6 +16,7 @@ import com.fms.ruleengine.ReasonCode;
 import com.fms.ruleengine.RuleEngine;
 import com.fms.sync.dto.SnapshotResponse;
 import com.fms.sync.service.SnapshotLoaderService;
+import io.micrometer.observation.annotation.Observed;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -29,23 +31,33 @@ public class EvaluateService {
     private final SnapshotCacheService snapshotCacheService;
     private final SnapshotLoaderService snapshotLoaderService;
     private final FeatureFlagRepository featureFlagRepository;
+    private final FmsMetrics metrics;
 
     public EvaluateService(
             RuleEngine ruleEngine,
             SnapshotCacheService snapshotCacheService,
             SnapshotLoaderService snapshotLoaderService,
-            FeatureFlagRepository featureFlagRepository) {
+            FeatureFlagRepository featureFlagRepository,
+            FmsMetrics metrics) {
         this.ruleEngine = ruleEngine;
         this.snapshotCacheService = snapshotCacheService;
         this.snapshotLoaderService = snapshotLoaderService;
         this.featureFlagRepository = featureFlagRepository;
+        this.metrics = metrics;
     }
 
+    @Observed(name = "fms.evaluate", contextualName = "evaluate-flag")
     public EvaluateResponse evaluate(String flagKey, EvaluateRequest request) {
         long start = System.nanoTime();
         SnapshotResponse snapshot = resolveSnapshot(request.environment(), request.appId(), request.configVersion());
-        BatchFlagResult result = evaluateInSnapshot(flagKey, snapshot, toContext(request.context()), true);
-        long latencyMs = (System.nanoTime() - start) / 1_000_000;
+        EvaluationContext context = toContext(request.context());
+        long ruleStart = System.nanoTime();
+        BatchFlagResult result = evaluateInSnapshot(flagKey, snapshot, context, true);
+        long ruleEvalNanos = System.nanoTime() - ruleStart;
+        long durationNanos = System.nanoTime() - start;
+
+        metrics.recordEvaluation(
+                request.appId(), flagKey, result.reasonCode(), durationNanos, ruleEvalNanos);
 
         SnapshotResponse.FlagSnapshot flag = findFlag(snapshot, flagKey).orElse(null);
         String type = flag == null ? "boolean" : flag.type();
@@ -57,9 +69,10 @@ public class EvaluateService {
                 snapshot.configVersion(),
                 "remote",
                 result.reasonCode(),
-                latencyMs);
+                durationNanos / 1_000_000);
     }
 
+    @Observed(name = "fms.evaluate.batch", contextualName = "evaluate-batch")
     public BatchEvaluateResponse evaluateBatch(BatchEvaluateRequest request) {
         long start = System.nanoTime();
         SnapshotResponse snapshot = resolveSnapshot(request.environment(), request.appId(), null);
@@ -69,7 +82,9 @@ public class EvaluateService {
                 .map(flagKey -> evaluateInSnapshot(flagKey, snapshot, context, false))
                 .toList();
 
-        long latencyMs = (System.nanoTime() - start) / 1_000_000;
+        long durationNanos = System.nanoTime() - start;
+        metrics.recordBatchEvaluation(request.appId(), request.flagKeys().size(), durationNanos);
+        long latencyMs = durationNanos / 1_000_000;
         return new BatchEvaluateResponse(snapshot.configVersion(), "remote", results, latencyMs);
     }
 

@@ -1,0 +1,145 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "sum(rate(fms_eval_requests_total[5m]))",
+          "legendFormat": "evaluate"
+        },
+        {
+          "expr": "sum(rate(fms_sync_requests_total[5m]))",
+          "legendFormat": "sync"
+        },
+        {
+          "expr": "sum(rate(fms_explain_requests_total[5m]))",
+          "legendFormat": "explain"
+        }
+      ],
+      "title": "FMS Request Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(fms_eval_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "eval p99"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(fms_publish_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "publish p95"
+        }
+      ],
+      "title": "FMS Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "fms_cache_hit_ratio",
+          "legendFormat": "hit ratio"
+        }
+      ],
+      "title": "Redis L2 Cache Hit Ratio",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 8
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "max(fms_config_version_lag_seconds)",
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "title": "Config Propagation Lag",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "topk(10, sum by (flag_key) (rate(fms_eval_requests_by_flag_total[5m])))",
+          "legendFormat": "{{flag_key}}"
+        }
+      ],
+      "title": "Top Flags by Evaluation Volume",
+      "type": "timeseries"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "fms",
+    "feature-management"
+  ],
+  "title": "FMS Service Health",
+  "uid": "fms-service-health",
+  "version": 1
+}
