@@ -5,6 +5,7 @@ import com.fms.management.service.EnvironmentManagementService;
 import com.fms.management.dto.EnvironmentResponse;
 import com.fms.management.dto.PromoteRequest;
 import com.fms.management.dto.PromoteResponse;
+import com.fms.management.idempotency.Idempotent;
 import com.fms.management.security.RequiresScope;
 import com.fms.management.support.ManagementActorResolver;
 import io.swagger.v3.oas.annotations.Operation;
@@ -54,6 +55,7 @@ public class EnvironmentController {
 
     @PostMapping("/{env}/promote")
     @RequiresScope("flags:publish")
+    @Idempotent
     @Operation(summary = "Promote configuration from source environment")
     ResponseEntity<PromoteResponse> promote(
             @PathVariable("env") String targetEnvironment,

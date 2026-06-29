@@ -12,6 +12,7 @@ import com.fms.management.dto.PublishFlagRequest;
 import com.fms.management.dto.PublishFlagResponse;
 import com.fms.management.dto.RollbackFlagRequest;
 import com.fms.management.dto.UpdateFlagRequest;
+import com.fms.management.idempotency.Idempotent;
 import com.fms.management.security.RequiresScope;
 import com.fms.management.support.ManagementActorResolver;
 import io.swagger.v3.oas.annotations.Operation;
@@ -126,6 +127,7 @@ public class FlagController {
 
     @PostMapping("/{flagKey}/publish")
     @RequiresScope("flags:publish")
+    @Idempotent
     @Operation(summary = "Publish feature flag to environment")
     ResponseEntity<PublishFlagResponse> publishFlag(
             @PathVariable String flagKey,
@@ -143,6 +145,7 @@ public class FlagController {
 
     @PostMapping("/{flagKey}/rollback")
     @RequiresScope("flags:publish")
+    @Idempotent
     @Operation(summary = "Rollback feature flag to prior version")
     ResponseEntity<PublishFlagResponse> rollbackFlag(
             @PathVariable String flagKey,

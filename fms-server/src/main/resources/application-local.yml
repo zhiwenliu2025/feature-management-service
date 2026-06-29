@@ -13,6 +13,8 @@ fms:
   security:
     oauth2:
       enabled: false
+    api-key:
+      enforced: false
 
 logging:
   level:

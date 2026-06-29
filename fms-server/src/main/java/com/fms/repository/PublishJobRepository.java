@@ -18,4 +18,7 @@ public interface PublishJobRepository extends JpaRepository<PublishJobEntity, Lo
             ORDER BY p.createdAt ASC
             """)
     List<PublishJobEntity> findByStatusOrderByCreatedAtAsc(PublishJobStatus status, Pageable pageable);
+
+    boolean existsByFlag_IdAndEnvironmentAndStatus(
+            java.util.UUID flagId, String environment, PublishJobStatus status);
 }

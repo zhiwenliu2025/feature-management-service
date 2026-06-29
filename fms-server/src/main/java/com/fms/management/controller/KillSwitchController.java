@@ -3,6 +3,7 @@ package com.fms.management.controller;
 import com.fms.management.dto.KillSwitchRequest;
 import com.fms.management.service.KillSwitchService;
 import com.fms.management.dto.KillSwitchResponse;
+import com.fms.management.idempotency.Idempotent;
 import com.fms.management.security.RequiresScope;
 import com.fms.management.support.ManagementActorResolver;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,26 +37,28 @@ public class KillSwitchController {
 
     @PostMapping("/{flagKey}/kill-switch")
     @RequiresScope("flags:kill")
+    @Idempotent
     @Operation(summary = "Activate kill switch")
-    KillSwitchResponse activate(
+    ResponseEntity<KillSwitchResponse> activate(
             @PathVariable String flagKey,
             @Valid @RequestBody KillSwitchRequest request,
             @AuthenticationPrincipal Jwt jwt,
             HttpServletRequest httpRequest) {
-        return killSwitchService.activate(flagKey, request, actorResolver.resolve(jwt),
-                httpRequest.getHeader("X-Request-Id"));
+        return ResponseEntity.ok(killSwitchService.activate(flagKey, request, actorResolver.resolve(jwt),
+                httpRequest.getHeader("X-Request-Id")));
     }
 
     @DeleteMapping("/{flagKey}/kill-switch")
     @RequiresScope("flags:kill")
+    @Idempotent
     @Operation(summary = "Deactivate kill switch")
-    KillSwitchResponse deactivate(
+    ResponseEntity<KillSwitchResponse> deactivate(
             @PathVariable String flagKey,
             @Valid @RequestBody KillSwitchRequest request,
             @AuthenticationPrincipal Jwt jwt,
             HttpServletRequest httpRequest) {
-        return killSwitchService.deactivate(flagKey, request, actorResolver.resolve(jwt),
-                httpRequest.getHeader("X-Request-Id"));
+        return ResponseEntity.ok(killSwitchService.deactivate(flagKey, request, actorResolver.resolve(jwt),
+                httpRequest.getHeader("X-Request-Id")));
     }
 
     @GetMapping("/{flagKey}/kill-switch")

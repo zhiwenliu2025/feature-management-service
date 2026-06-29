@@ -136,6 +136,14 @@ public class ApiKeyEntity {
         return createdAt;
     }
 
+    public Instant getLastUsedAt() {
+        return lastUsedAt;
+    }
+
+    public void setLastUsedAt(Instant lastUsedAt) {
+        this.lastUsedAt = lastUsedAt;
+    }
+
     public boolean isRevoked() {
         return revokedAt != null;
     }

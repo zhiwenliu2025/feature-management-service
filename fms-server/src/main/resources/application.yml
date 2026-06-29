@@ -58,6 +58,10 @@ fms:
   security:
     oauth2:
       enabled: false
+    api-key:
+      enforced: true
+    idempotency:
+      ttl: 24h
   sync:
     delta-max-gap: 100
     snapshot-ttl: 24h

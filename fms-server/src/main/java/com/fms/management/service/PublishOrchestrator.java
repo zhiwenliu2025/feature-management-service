@@ -81,6 +81,7 @@ public class PublishOrchestrator {
             String actor,
             String requestId) {
         validateEnvironment(targetEnvironment);
+        ensureNoPendingPublishJob(flag.getId(), targetEnvironment);
         ReleaseEntity release = null;
         if (releaseId != null && !releaseId.isBlank()) {
             release = releaseRepository.findByReleaseId(releaseId)
@@ -138,6 +139,7 @@ public class PublishOrchestrator {
             String actor,
             String requestId) {
         validateEnvironment(request.environment());
+        ensureNoPendingPublishJob(flag.getId(), request.environment());
         List<FlagRuleEntity> rules = flagRuleRepository.findByFlag_IdAndEnvironmentOrderByPriorityAsc(
                 flag.getId(), request.environment());
 
@@ -204,6 +206,7 @@ public class PublishOrchestrator {
             String actor,
             String requestId) {
         validateEnvironment(request.environment());
+        ensureNoPendingPublishJob(flag.getId(), request.environment());
         FlagVersionEntity target = flagVersionRepository
                 .findByFlag_IdAndEnvironmentAndFlagVersion(flag.getId(), request.environment(), request.targetFlagVersion())
                 .orElseThrow(() -> new FmsException(FmsErrorCode.ROLLBACK_TARGET_NOT_FOUND,
@@ -310,6 +313,15 @@ public class PublishOrchestrator {
     private void validateEnvironment(String environment) {
         if (!environmentRepository.existsById(environment)) {
             throw new FmsException(FmsErrorCode.INVALID_ENVIRONMENT, "Environment not found: " + environment);
+        }
+    }
+
+    private void ensureNoPendingPublishJob(java.util.UUID flagId, String environment) {
+        if (publishJobRepository.existsByFlag_IdAndEnvironmentAndStatus(
+                flagId, environment, PublishJobStatus.pending)) {
+            throw new FmsException(
+                    FmsErrorCode.PUBLISH_IN_PROGRESS,
+                    "A publish job is already pending for this flag in the environment.");
         }
     }
 }

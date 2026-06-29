@@ -62,10 +62,19 @@ public abstract class ManagementIntegrationTestSupport {
     }
 
     protected ResultActions publishFlag(String appId, String flagKey, String environment) throws Exception {
-        return mockMvc.perform(post("/api/v1/management/flags/{flagKey}/publish", flagKey)
+        return publishFlag(appId, flagKey, environment, null);
+    }
+
+    protected ResultActions publishFlag(String appId, String flagKey, String environment, String idempotencyKey)
+            throws Exception {
+        var requestBuilder = post("/api/v1/management/flags/{flagKey}/publish", flagKey)
                 .param("appId", appId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new PublishFlagRequest(
-                        environment, null, "Test publish", false))));
+                        environment, null, "Test publish", false)));
+        if (idempotencyKey != null) {
+            requestBuilder = requestBuilder.header("Idempotency-Key", idempotencyKey);
+        }
+        return mockMvc.perform(requestBuilder);
     }
 }

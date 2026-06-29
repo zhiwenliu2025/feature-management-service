@@ -4,6 +4,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties(FmsSyncProperties.class)
+@EnableConfigurationProperties({FmsSyncProperties.class, FmsSecurityProperties.class})
 public class FmsPropertiesConfig {
 }

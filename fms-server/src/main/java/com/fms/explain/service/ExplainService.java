@@ -20,6 +20,7 @@ import com.fms.ruleengine.ExplainResult;
 import com.fms.ruleengine.ReasonCode;
 import com.fms.ruleengine.RuleEngine;
 import com.fms.ruleengine.TraceStep;
+import com.fms.security.DataPlaneAuthzService;
 import com.fms.sync.dto.SnapshotResponse;
 import com.fms.sync.service.SnapshotLoaderService;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,7 @@ public class ExplainService {
     private final ReleaseRepository releaseRepository;
     private final ConfigVersionHistoryRepository configVersionHistoryRepository;
     private final FlagVersionRepository flagVersionRepository;
+    private final DataPlaneAuthzService dataPlaneAuthzService;
 
     public ExplainService(
             RuleEngine ruleEngine,
@@ -55,7 +57,8 @@ public class ExplainService {
             KillSwitchOverrideRepository killSwitchOverrideRepository,
             ReleaseRepository releaseRepository,
             ConfigVersionHistoryRepository configVersionHistoryRepository,
-            FlagVersionRepository flagVersionRepository) {
+            FlagVersionRepository flagVersionRepository,
+            DataPlaneAuthzService dataPlaneAuthzService) {
         this.ruleEngine = ruleEngine;
         this.snapshotCacheService = snapshotCacheService;
         this.snapshotLoaderService = snapshotLoaderService;
@@ -64,10 +67,14 @@ public class ExplainService {
         this.releaseRepository = releaseRepository;
         this.configVersionHistoryRepository = configVersionHistoryRepository;
         this.flagVersionRepository = flagVersionRepository;
+        this.dataPlaneAuthzService = dataPlaneAuthzService;
     }
 
     @Transactional(readOnly = true)
     public ExplainResponse explain(String flagKey, ExplainRequest request) {
+        if (request.includeCustomAttributes()) {
+            dataPlaneAuthzService.requireScope("explain:pii");
+        }
         FeatureFlagEntity flagEntity = requireFlag(request.appId(), flagKey);
         SnapshotResponse snapshot = resolveCurrentSnapshot(request.environment(), request.appId());
         Map<String, Object> flagSnapshot = findFlagSnapshot(snapshot, flagKey).orElse(Map.of());
@@ -85,6 +92,9 @@ public class ExplainService {
 
     @Transactional(readOnly = true)
     public ExplainResponse replay(String flagKey, ReplayExplainRequest request) {
+        if (request.includeCustomAttributes()) {
+            dataPlaneAuthzService.requireScope("explain:pii");
+        }
         if (request.configVersion() == null && request.timestamp() == null) {
             throw new FmsException(
                     FmsErrorCode.VALIDATION_ERROR,

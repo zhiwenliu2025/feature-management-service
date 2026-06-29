@@ -19,6 +19,7 @@ import com.fms.ruleengine.ExplainResult;
 import com.fms.ruleengine.ReasonCode;
 import com.fms.ruleengine.RuleEngine;
 import com.fms.ruleengine.TraceStep;
+import com.fms.security.DataPlaneAuthzService;
 import com.fms.sync.dto.SnapshotResponse;
 import com.fms.sync.service.SnapshotLoaderService;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,6 +74,9 @@ class ExplainServiceTest {
     @Mock
     private FlagVersionRepository flagVersionRepository;
 
+    @Mock
+    private DataPlaneAuthzService dataPlaneAuthzService;
+
     private ExplainService explainService;
 
     @BeforeEach
@@ -85,7 +89,8 @@ class ExplainServiceTest {
                 killSwitchOverrideRepository,
                 releaseRepository,
                 configVersionHistoryRepository,
-                flagVersionRepository);
+                flagVersionRepository,
+                dataPlaneAuthzService);
     }
 
     @Test

@@ -19,12 +19,15 @@ public class SecurityConfig {
   @Bean
   @Order(1)
   @Profile("local")
-  SecurityFilterChain localSecurityFilterChain(HttpSecurity http) throws Exception {
+  SecurityFilterChain localSecurityFilterChain(
+      HttpSecurity http,
+      ApiKeyAuthenticationFilter apiKeyAuthenticationFilter) throws Exception {
     return http
         .securityMatcher("/api/**")
         .csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+        .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .build();
   }
 
