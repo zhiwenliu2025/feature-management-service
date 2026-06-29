@@ -5,7 +5,7 @@ import java.util.List;
 public record BatchEvaluateResponse(
         long configVersion,
         String evaluationMode,
-        List<EvaluateResponse> results,
+        List<BatchFlagResult> results,
         long latencyMs
 ) {
 }

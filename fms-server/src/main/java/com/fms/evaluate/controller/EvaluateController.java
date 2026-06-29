@@ -1,9 +1,10 @@
-package com.fms.evaluate;
+package com.fms.evaluate.controller;
 
 import com.fms.evaluate.dto.BatchEvaluateRequest;
 import com.fms.evaluate.dto.BatchEvaluateResponse;
 import com.fms.evaluate.dto.EvaluateRequest;
 import com.fms.evaluate.dto.EvaluateResponse;
+import com.fms.evaluate.service.EvaluateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
