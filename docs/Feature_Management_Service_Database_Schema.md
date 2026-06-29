@@ -2,18 +2,20 @@
 
 | Attribute | Value |
 |-----------|-------|
-| **Document Version** | 1.0 |
-| **Status** | Draft |
+| **Document Version** | 1.1 |
+| **Status** | As-built (aligned with Flyway V1–V5) |
 | **Created** | 2026-06-25 |
+| **Last Updated** | 2026-06-29 |
 | **Database** | PostgreSQL 18.4 |
 | **Migration Tool** | Flyway 12.4.0 |
+| **Migration Location** | `fms-server/src/main/resources/db/migration/` |
 | **Related Documents** | [BRD](./Feature_Management_Service_BRD.md) · [Technical Architecture](./Feature_Management_Service_Technical_Architecture.md) · [Redis Cache Design](./Feature_Management_Service_Redis_Cache_Design.md) · [Technology Stack](./Feature_Management_Service_Technology_Stack.md) |
 
 ---
 
 ## 1. Purpose
 
-This document defines the **PostgreSQL relational data model** for the Feature Management Service (FMS). It serves as the authoritative table-structure reference during implementation. It covers:
+This document defines the **PostgreSQL relational data model** for the Feature Management Service (FMS). It serves as the authoritative table-structure reference during implementation and reflects the **as-built schema** from Flyway migrations V1–V5. It covers:
 
 - Entity relationships and table inventory
 - Column definitions, constraints, and indexing strategy
@@ -135,36 +137,34 @@ erDiagram
 
 ## 5. Enums and Domain Types
 
-### 5.1 PostgreSQL ENUM Types
+### 5.1 Storage vs Application Layer
 
-> **Implementation note (V3 migration)**: Runtime columns use `VARCHAR(32)` for JPA/Hibernate compatibility. The ENUM definitions below remain the authoritative value set.
+| Layer | Mechanism | Notes |
+|-------|-----------|-------|
+| **PostgreSQL** | `VARCHAR(32)` | All former ENUM columns were converted in `V3__enum_columns_to_varchar.sql`; PostgreSQL ENUM types are **not** present in the as-built schema |
+| **Application** | Java enums in `com.fms.domain.enums` | Hibernate maps `@Enumerated(EnumType.STRING)` to `VARCHAR`; this is the authoritative value set at runtime |
 
-```sql
-CREATE TYPE flag_status AS ENUM ('draft', 'published', 'archived');
+### 5.2 Domain Value Sets
 
-CREATE TYPE flag_type AS ENUM ('boolean', 'string', 'number', 'json');
+| Column(s) | Java Enum | Allowed Values |
+|-----------|-----------|----------------|
+| `applications.status` | `ApplicationStatus` | `active`, `inactive`, `suspended` |
+| `feature_flags.status` | `FlagStatus` | `draft`, `published`, `archived` |
+| `feature_flags.type` | `FlagType` | `boolean`, `string`, `number`, `json` |
+| `publish_jobs.status` | `PublishJobStatus` | `pending`, `processing`, `completed`, `failed`, `cancelled` |
+| `publish_jobs.job_type` | `PublishJobType` | `publish`, `rollback`, `promote` |
+| `kill_switch_overrides.scope` | `KillSwitchScope` | `global`, `region` |
+| `audit_events.action` | `AuditAction` | `create`, `update`, `delete`, `publish`, `rollback`, `promote`, `archive`, `kill_switch_on`, `kill_switch_off` |
 
-CREATE TYPE application_status AS ENUM ('active', 'inactive', 'suspended');
+> **Migration history**: `V1` and `V2` originally created PostgreSQL ENUM types; `V3` dropped them after converting affected columns to `VARCHAR(32)` for Hibernate 7 compatibility.
 
-CREATE TYPE publish_job_status AS ENUM (
-    'pending', 'processing', 'completed', 'failed', 'cancelled'
-);
-
-CREATE TYPE kill_switch_scope AS ENUM ('global', 'region');
-
-CREATE TYPE audit_action AS ENUM (
-    'create', 'update', 'delete', 'publish', 'rollback',
-    'promote', 'archive', 'kill_switch_on', 'kill_switch_off'
-);
-```
-
-### 5.2 Naming Conventions
+### 5.3 Naming Conventions
 
 | Convention | Rule |
 |------------|------|
 | Primary keys | `UUID` (`gen_random_uuid()`) for business entities; `BIGSERIAL` for high-write log tables |
 | Timestamps | `TIMESTAMPTZ`, always UTC |
-| Soft delete | Not used; archival via `flag_status = 'archived'` |
+| Soft delete | Not used; archival via `feature_flags.status = 'archived'` |
 | FK on delete | `RESTRICT` for business entities; `CASCADE` for junction tables; `RESTRICT` for audit/history |
 
 ---
@@ -181,7 +181,7 @@ CREATE TYPE audit_action AS ENUM (
 | `is_production` | `BOOLEAN` | NOT NULL DEFAULT FALSE | Whether this is a production environment |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL DEFAULT `now()` | Created timestamp |
 
-**Seed data**: `dev`, `staging`, `prod` (`prod.is_production = true`).
+**Seed data** (`V1__init_schema.sql`): `dev`, `staging`, `prod` (`prod.is_production = true`); `environment_config` rows initialized to `current_config_version = 0`; demo application `checkout-service` for local development.
 
 ---
 
@@ -193,7 +193,7 @@ CREATE TYPE audit_action AS ENUM (
 | `slug` | `VARCHAR(64)` | NOT NULL, UNIQUE | `appId` used by SDK/API |
 | `name` | `VARCHAR(128)` | NOT NULL | Application name |
 | `description` | `TEXT` | | Description |
-| `status` | `application_status` | NOT NULL DEFAULT `'active'` | Status |
+| `status` | `VARCHAR(32)` | NOT NULL DEFAULT `'active'` | Status (`ApplicationStatus`) |
 | `owner_team` | `VARCHAR(128)` | | Owning team |
 | `created_by` | `VARCHAR(256)` | NOT NULL | Creator (OIDC subject or email) |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL DEFAULT `now()` | |
@@ -203,7 +203,7 @@ CREATE TYPE audit_action AS ENUM (
 
 ```sql
 CREATE INDEX idx_applications_status ON applications (status);
-CREATE INDEX idx_applications_slug ON applications (slug);  -- covered by UNIQUE; explicit for documentation
+-- idx_applications_slug: not migrated; UNIQUE on slug already provides lookup
 ```
 
 ---
@@ -229,8 +229,9 @@ CREATE INDEX idx_applications_slug ON applications (slug);  -- covered by UNIQUE
 ```sql
 CREATE INDEX idx_api_keys_application ON api_keys (application_id);
 CREATE INDEX idx_api_keys_prefix ON api_keys (key_prefix);
-CREATE INDEX idx_api_keys_active ON api_keys (application_id)
-    WHERE revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now());
+-- Planned (not in V1–V5): partial index for active keys only
+-- CREATE INDEX idx_api_keys_active ON api_keys (application_id)
+--     WHERE revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now());
 ```
 
 ---
@@ -254,9 +255,9 @@ CREATE INDEX idx_api_keys_active ON api_keys (application_id)
 | `key` | `VARCHAR(128)` | NOT NULL | Unique flag key (unique per application) |
 | `name` | `VARCHAR(256)` | NOT NULL | Display name |
 | `description` | `TEXT` | | Description |
-| `type` | `flag_type` | NOT NULL DEFAULT `'boolean'` | Value type |
+| `type` | `VARCHAR(32)` | NOT NULL DEFAULT `'boolean'` | Value type (`FlagType`) |
 | `default_value` | `JSONB` | NOT NULL | Default value (e.g., `false`, `"control"`) |
-| `status` | `flag_status` | NOT NULL DEFAULT `'draft'` | Global lifecycle status |
+| `status` | `VARCHAR(32)` | NOT NULL DEFAULT `'draft'` | Global lifecycle status (`FlagStatus`) |
 | `rollout_salt` | `VARCHAR(64)` | NOT NULL | Stable bucketing salt (written into snapshot on publish) |
 | `created_by` | `VARCHAR(256)` | NOT NULL | |
 | `updated_by` | `VARCHAR(256)` | | |
@@ -333,7 +334,7 @@ ALTER TABLE flag_rules
 
 ```sql
 CREATE INDEX idx_flag_rules_flag_env ON flag_rules (flag_id, environment);
-CREATE INDEX idx_flag_rules_conditions ON flag_rules USING GIN (conditions);
+CREATE INDEX idx_flag_rules_conditions ON flag_rules USING GIN (conditions);  -- V5
 ```
 
 ---
@@ -425,8 +426,9 @@ ALTER TABLE flag_versions
 ```sql
 CREATE INDEX idx_flag_versions_flag_env ON flag_versions (flag_id, environment, flag_version DESC);
 CREATE INDEX idx_flag_versions_env_config ON flag_versions (environment, config_version DESC);
-CREATE INDEX idx_flag_versions_published_at ON flag_versions (published_at DESC);
-CREATE INDEX idx_flag_versions_release ON flag_versions (release_id) WHERE release_id IS NOT NULL;
+-- Planned (not in V1–V5):
+-- CREATE INDEX idx_flag_versions_published_at ON flag_versions (published_at DESC);
+-- CREATE INDEX idx_flag_versions_release ON flag_versions (release_id) WHERE release_id IS NOT NULL;
 ```
 
 ---
@@ -483,7 +485,7 @@ CREATE INDEX idx_config_version_history_env_created
 | `id` | `UUID` | PK | |
 | `flag_id` | `UUID` | NOT NULL, FK → `feature_flags(id)` ON DELETE CASCADE | |
 | `environment` | `VARCHAR(32)` | NOT NULL, FK → `environments(name)` | |
-| `scope` | `kill_switch_scope` | NOT NULL | `global` or `region` |
+| `scope` | `VARCHAR(32)` | NOT NULL | `global` or `region` (`KillSwitchScope`) |
 | `region_code` | `VARCHAR(8)` | | Required when `scope=region` (ISO 3166-1 alpha-2) |
 | `is_active` | `BOOLEAN` | NOT NULL DEFAULT TRUE | Whether override is active |
 | `forced_value` | `JSONB` | NOT NULL DEFAULT `'false'` | Forced return value (typically `false`) |
@@ -525,9 +527,9 @@ Transactional Outbox pattern; consumed asynchronously by the Publish Worker afte
 | `environment` | `VARCHAR(32)` | NOT NULL, FK → `environments(name)` | |
 | `config_version` | `BIGINT` | NOT NULL | Allocated environment version number |
 | `flag_version_id` | `BIGINT` | FK → `flag_versions(id)` ON DELETE RESTRICT | Linked snapshot row |
-| `job_type` | `VARCHAR(32)` | NOT NULL DEFAULT `'publish'` | `publish` / `rollback` / `promote` |
+| `job_type` | `VARCHAR(32)` | NOT NULL DEFAULT `'publish'` | `PublishJobType`: `publish`, `rollback`, `promote` |
 | `payload` | `JSONB` | NOT NULL | Compilation context required by worker |
-| `status` | `publish_job_status` | NOT NULL DEFAULT `'pending'` | |
+| `status` | `VARCHAR(32)` | NOT NULL DEFAULT `'pending'` | `PublishJobStatus` |
 | `attempt_count` | `SMALLINT` | NOT NULL DEFAULT 0 | |
 | `max_attempts` | `SMALLINT` | NOT NULL DEFAULT 5 | |
 | `locked_by` | `VARCHAR(128)` | | Worker instance ID |
@@ -545,8 +547,8 @@ CREATE INDEX idx_publish_jobs_pending
     ON publish_jobs (next_retry_at)
     WHERE status IN ('pending', 'failed') AND attempt_count < max_attempts;
 
-CREATE INDEX idx_publish_jobs_env_version ON publish_jobs (environment, config_version);
-CREATE INDEX idx_publish_jobs_flag ON publish_jobs (flag_id, created_at DESC);
+CREATE INDEX idx_publish_jobs_env_version ON publish_jobs (environment, config_version);  -- V5
+CREATE INDEX idx_publish_jobs_flag ON publish_jobs (flag_id, created_at DESC);           -- V5
 ```
 
 **Worker claim SQL (reference)**:
@@ -578,7 +580,7 @@ RETURNING *;
 | `id` | `BIGSERIAL` | PK | |
 | `actor` | `VARCHAR(256)` | NOT NULL | Actor |
 | `actor_ip_hash` | `VARCHAR(64)` | | Hashed request IP (not plaintext IP) |
-| `action` | `audit_action` | NOT NULL | Action type |
+| `action` | `VARCHAR(32)` | NOT NULL | Action type (`AuditAction`) |
 | `resource_type` | `VARCHAR(64)` | NOT NULL | e.g., `feature_flag`, `release` |
 | `resource_id` | `VARCHAR(256)` | NOT NULL | Resource identifier |
 | `environment` | `VARCHAR(32)` | | Related environment |
@@ -627,7 +629,7 @@ CONSTRAINT uq_idempotency_key_operation UNIQUE (idempotency_key, operation_key)
 CREATE INDEX idx_idempotency_records_expires_at ON idempotency_records (expires_at);
 ```
 
-> **Note**: The legacy `idempotency_keys` table from early migrations was removed in `V5__schema_cleanup_and_indexes.sql`.
+> **Migration path**: `V2` introduced `idempotency_keys` (single-key-per-endpoint model). `V4` added `idempotency_records` with composite `(idempotency_key, operation_key)` uniqueness. `V5` dropped `idempotency_keys`.
 
 ---
 
@@ -765,43 +767,37 @@ config_version_history  (records which flags changed)
 
 ---
 
-## 11. Initial DDL Script Structure (Flyway)
+## 11. Flyway Migration Inventory (As-built)
 
-Recommended migration file naming:
+Actual migration files under `fms-server/src/main/resources/db/migration/`:
 
-```
-db/migration/
-├── V1__create_extensions_and_enums.sql
-├── V2__create_reference_tables.sql          -- environments, tags
-├── V3__create_applications_and_api_keys.sql
-├── V4__create_feature_flags_and_rules.sql
-├── V5__create_versions_and_environment_config.sql
-├── V6__create_releases.sql
-├── V7__create_kill_switch_and_publish_jobs.sql
-├── V8__create_audit_events.sql
-├── V9__create_indexes.sql
-└── R__seed_environments.sql                 -- repeatable: dev/staging/prod
-```
+| Version | File | Contents |
+|---------|------|----------|
+| V1 | `V1__init_schema.sql` | `pgcrypto` extension; `environments`, `applications`, `feature_flags`, `environment_config`; seed data |
+| V2 | `V2__management_schema.sql` | `tags`, `feature_flag_tags`, `releases`, `flag_rules`, `flag_versions`, `flag_environment_state`, `release_flags`, `publish_jobs`, `config_version_history`, `kill_switch_overrides`, `api_keys`, `audit_events`, legacy `idempotency_keys` |
+| V3 | `V3__enum_columns_to_varchar.sql` | Convert status/type/action/scope columns to `VARCHAR(32)`; drop PostgreSQL ENUM types |
+| V4 | `V4__idempotency_records.sql` | `idempotency_records` table (replaces `idempotency_keys` model) |
+| V5 | `V5__schema_cleanup_and_indexes.sql` | Drop `idempotency_keys`; add GIN index on `flag_rules.conditions`; add `publish_jobs` env/flag indexes |
 
-### 11.1 Extensions and Functions (V1 Summary)
+### 11.1 Extensions and `updated_at` Handling
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";  -- gen_random_uuid()
-
-CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = now();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Apply to tables with updated_at
-CREATE TRIGGER trg_applications_updated_at
-    BEFORE UPDATE ON applications
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
--- ... feature_flags, flag_rules, flag_environment_state, environment_config
 ```
+
+`updated_at` is **not** maintained by database triggers. JPA entities use `@PreUpdate` (`ApplicationEntity`, `FeatureFlagEntity`, `FlagRuleEntity`, `FlagEnvironmentStateEntity`); `EnvironmentConfigEntity` is updated explicitly in `PublishOrchestrator` on publish.
+
+### 11.2 Planned Migrations (Not Yet Implemented)
+
+The following were in the original design but are not present in V1–V5:
+
+| Item | Purpose |
+|------|---------|
+| `idx_api_keys_active` | Partial index for non-revoked, non-expired keys |
+| `idx_flag_versions_published_at` | Time-ordered version history queries |
+| `idx_flag_versions_release` | Release-scoped version lookups |
+| `set_updated_at()` trigger function | DB-level `updated_at` automation (superseded by JPA) |
+| Monthly partitioning on `flag_versions` / `audit_events` | Phase 2 scale-out |
 
 ---
 
@@ -835,18 +831,19 @@ CREATE TRIGGER trg_applications_updated_at
 
 ## 14. Open Questions
 
-| # | Question | Affected Tables |
-|---|----------|-----------------|
-| 1 | Should large user segments be externalized to a Segment service? | `flag_rules.conditions.segment` |
-| 2 | `config_version_history` retention window: 100 vs 500? | Incremental sync compatibility |
-| 3 | Multi-region writes: single primary vs multi-primary conflict resolution? | `environment_config` write path |
-| 4 | Should `flag_versions` store compressed binary instead of JSONB? | Storage vs Explain query complexity |
+| # | Question | Affected Tables | Status |
+|---|----------|-----------------|--------|
+| 1 | Should large user segments be externalized to a Segment service? | `flag_rules.conditions.segment` | Open |
+| 2 | `config_version_history` retention window: 100 vs 500? | Incremental sync compatibility | Open |
+| 3 | Multi-region writes: single primary vs multi-primary conflict resolution? | `environment_config` write path | Open |
+| 4 | Should `flag_versions` store compressed binary instead of JSONB? | Storage vs Explain query complexity | Open |
+| 5 | Add planned partial/GIN indexes (`idx_api_keys_active`, `idx_flag_versions_*`)? | Query performance | Open — see §11.2 |
 
 ---
 
 ## 15. Appendix: Full CREATE TABLE SQL (MVP)
 
-> Executable DDL summary for MVP; full migrations should live in Flyway scripts.
+> Executable DDL summary aligned with Flyway V1–V5. Enum-like columns use `VARCHAR(32)`.
 
 ```sql
 -- See §6 for full column definitions; core table CREATE skeleton below
@@ -864,7 +861,7 @@ CREATE TABLE applications (
     slug         VARCHAR(64)  NOT NULL UNIQUE,
     name         VARCHAR(128) NOT NULL,
     description  TEXT,
-    status       application_status NOT NULL DEFAULT 'active',
+    status       VARCHAR(32)  NOT NULL DEFAULT 'active',
     owner_team   VARCHAR(128),
     created_by   VARCHAR(256) NOT NULL,
     created_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),
@@ -877,9 +874,9 @@ CREATE TABLE feature_flags (
     key             VARCHAR(128) NOT NULL,
     name            VARCHAR(256) NOT NULL,
     description     TEXT,
-    type            flag_type NOT NULL DEFAULT 'boolean',
+    type            VARCHAR(32) NOT NULL DEFAULT 'boolean',
     default_value   JSONB NOT NULL,
-    status          flag_status NOT NULL DEFAULT 'draft',
+    status          VARCHAR(32) NOT NULL DEFAULT 'draft',
     rollout_salt    VARCHAR(64) NOT NULL,
     created_by      VARCHAR(256) NOT NULL,
     updated_by      VARCHAR(256),
@@ -919,7 +916,7 @@ CREATE TABLE publish_jobs (
     flag_version_id BIGINT REFERENCES flag_versions(id) ON DELETE RESTRICT,
     job_type        VARCHAR(32) NOT NULL DEFAULT 'publish',
     payload         JSONB NOT NULL,
-    status          publish_job_status NOT NULL DEFAULT 'pending',
+    status          VARCHAR(32) NOT NULL DEFAULT 'pending',
     attempt_count   SMALLINT NOT NULL DEFAULT 0,
     max_attempts    SMALLINT NOT NULL DEFAULT 5,
     locked_by       VARCHAR(128),
@@ -934,7 +931,7 @@ CREATE TABLE audit_events (
     id            BIGSERIAL PRIMARY KEY,
     actor         VARCHAR(256) NOT NULL,
     actor_ip_hash VARCHAR(64),
-    action        audit_action NOT NULL,
+    action        VARCHAR(32) NOT NULL,
     resource_type VARCHAR(64) NOT NULL,
     resource_id   VARCHAR(256) NOT NULL,
     environment   VARCHAR(32),
@@ -942,6 +939,18 @@ CREATE TABLE audit_events (
     diff          JSONB NOT NULL,
     metadata      JSONB NOT NULL DEFAULT '{}',
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE idempotency_records (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    idempotency_key     VARCHAR(128) NOT NULL,
+    operation_key       VARCHAR(512) NOT NULL,
+    response_status     INT NOT NULL,
+    response_body       JSONB NOT NULL,
+    response_headers    JSONB,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at          TIMESTAMPTZ NOT NULL,
+    CONSTRAINT uq_idempotency_key_operation UNIQUE (idempotency_key, operation_key)
 );
 ```
 
@@ -955,4 +964,4 @@ CREATE TABLE audit_events (
 
 ---
 
-*This document evolves with implementation. Schema changes must go through Flyway migration scripts and this document's version number must be updated accordingly.*
+*This document evolves with implementation. Schema changes must go through Flyway migration scripts in `fms-server/src/main/resources/db/migration/`; update this document's version number when migrations change.*
