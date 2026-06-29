@@ -1,4 +1,4 @@
-package com.fms.sync;
+package com.fms.sync.service;
 
 import com.fms.cache.SnapshotCacheService;
 import com.fms.common.exception.FmsErrorCode;

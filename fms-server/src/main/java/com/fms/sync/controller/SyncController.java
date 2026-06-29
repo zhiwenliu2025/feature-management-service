@@ -1,6 +1,8 @@
-package com.fms.sync;
+package com.fms.sync.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fms.sync.dto.SnapshotResponse;
+import com.fms.sync.service.SyncService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
@@ -14,9 +16,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.zip.GZIPOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.zip.GZIPOutputStream;
 
 @RestController
 @RequestMapping("/v1/sync")
@@ -24,9 +26,9 @@ import java.io.IOException;
 public class SyncController {
 
     private final SyncService syncService;
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
-    public SyncController(SyncService syncService, com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
+    public SyncController(SyncService syncService, ObjectMapper objectMapper) {
         this.syncService = syncService;
         this.objectMapper = objectMapper;
     }

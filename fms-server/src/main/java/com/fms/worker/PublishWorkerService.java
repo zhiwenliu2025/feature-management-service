@@ -5,7 +5,7 @@ import com.fms.domain.FeatureFlagEntity;
 import com.fms.domain.PublishJobEntity;
 import com.fms.domain.enums.PublishJobStatus;
 import com.fms.repository.PublishJobRepository;
-import com.fms.sync.SnapshotLoaderService;
+import com.fms.sync.service.SnapshotLoaderService;
 import com.fms.sync.dto.SnapshotResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

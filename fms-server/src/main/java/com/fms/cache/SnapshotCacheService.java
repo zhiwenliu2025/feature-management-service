@@ -3,7 +3,7 @@ package com.fms.cache;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fms.config.FmsSyncProperties;
-import com.fms.sync.SseStreamManager;
+import com.fms.sync.service.SseStreamManager;
 import com.fms.sync.dto.SnapshotResponse;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
