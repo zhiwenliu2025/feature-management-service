@@ -25,6 +25,9 @@ public class AuditEventEntity {
     @Column(nullable = false, length = 256)
     private String actor;
 
+    @Column(name = "actor_ip_hash", length = 64)
+    private String actorIpHash;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private AuditAction action;
@@ -45,6 +48,10 @@ public class AuditEventEntity {
     @Column(nullable = false, columnDefinition = "jsonb")
     private Object diff;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private Object metadata = java.util.Map.of();
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -58,6 +65,14 @@ public class AuditEventEntity {
 
     public void setActor(String actor) {
         this.actor = actor;
+    }
+
+    public String getActorIpHash() {
+        return actorIpHash;
+    }
+
+    public void setActorIpHash(String actorIpHash) {
+        this.actorIpHash = actorIpHash;
     }
 
     public AuditAction getAction() {
@@ -106,6 +121,14 @@ public class AuditEventEntity {
 
     public void setDiff(Object diff) {
         this.diff = diff;
+    }
+
+    public Object getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(Object metadata) {
+        this.metadata = metadata;
     }
 
     public Instant getCreatedAt() {

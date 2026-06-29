@@ -48,6 +48,12 @@ public class FlagRuleEntity {
     @Column(name = "is_enabled", nullable = false)
     private boolean enabled = true;
 
+    @Column(name = "schedule_start")
+    private Instant scheduleStart;
+
+    @Column(name = "schedule_end")
+    private Instant scheduleEnd;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -124,5 +130,21 @@ public class FlagRuleEntity {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public Instant getScheduleStart() {
+        return scheduleStart;
+    }
+
+    public void setScheduleStart(Instant scheduleStart) {
+        this.scheduleStart = scheduleStart;
+    }
+
+    public Instant getScheduleEnd() {
+        return scheduleEnd;
+    }
+
+    public void setScheduleEnd(Instant scheduleEnd) {
+        this.scheduleEnd = scheduleEnd;
     }
 }

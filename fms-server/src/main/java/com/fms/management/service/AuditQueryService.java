@@ -83,8 +83,11 @@ public class AuditQueryService {
 
     @SuppressWarnings("unchecked")
     private AuditEventResponse toResponse(AuditEventEntity event) {
-        Map<String, Object> diff = event.getDiff() instanceof Map<?, ?> map
-                ? (Map<String, Object>) map
+        Map<String, Object> diff = event.getDiff() instanceof Map<?, ?> diffMap
+                ? (Map<String, Object>) diffMap
+                : Map.of();
+        Map<String, Object> metadata = event.getMetadata() instanceof Map<?, ?> metadataMap
+                ? (Map<String, Object>) metadataMap
                 : Map.of();
         return new AuditEventResponse(
                 String.valueOf(event.getId()),
@@ -94,6 +97,7 @@ public class AuditQueryService {
                 event.getResourceId(),
                 event.getEnvironment(),
                 diff,
+                metadata,
                 event.getCreatedAt());
     }
 }

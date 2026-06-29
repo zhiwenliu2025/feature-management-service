@@ -20,8 +20,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.eq;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -76,8 +79,9 @@ class PublishOrchestratorTest {
         when(flag.getId()).thenReturn(flagId);
 
         when(environmentRepository.existsById("prod")).thenReturn(true);
-        when(publishJobRepository.existsByFlag_IdAndEnvironmentAndStatus(
-                flagId, "prod", PublishJobStatus.pending)).thenReturn(true);
+        when(publishJobRepository.existsByFlag_IdAndEnvironmentAndStatusIn(
+                eq(flagId), eq("prod"), eq(EnumSet.of(PublishJobStatus.pending, PublishJobStatus.processing))))
+                .thenReturn(true);
 
         PublishFlagRequest request = new PublishFlagRequest("prod", null, "publish", false);
 

@@ -129,12 +129,15 @@ erDiagram
 | 14 | `kill_switch_overrides` | Core | Emergency kill switch (global / regional) |
 | 15 | `publish_jobs` | Outbox | Async publish job queue |
 | 16 | `audit_events` | Audit | Management-plane audit log |
+| 17 | `idempotency_records` | Auxiliary | Management API idempotency cache |
 
 ---
 
 ## 5. Enums and Domain Types
 
 ### 5.1 PostgreSQL ENUM Types
+
+> **Implementation note (V3 migration)**: Runtime columns use `VARCHAR(32)` for JPA/Hibernate compatibility. The ENUM definitions below remain the authoritative value set.
 
 ```sql
 CREATE TYPE flag_status AS ENUM ('draft', 'published', 'archived');
@@ -594,6 +597,37 @@ CREATE INDEX idx_audit_events_action ON audit_events (action, created_at DESC);
 ```
 
 **Retention policy**: Online retention **13 months**; older records archived to cold storage (S3 / audit platform).
+
+---
+
+### 6.17 `idempotency_records` — Management API Idempotency
+
+Caches successful Management API responses keyed by `Idempotency-Key` header and request operation identity.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `UUID` | PK | |
+| `idempotency_key` | `VARCHAR(128)` | NOT NULL | Client-supplied idempotency key |
+| `operation_key` | `VARCHAR(512)` | NOT NULL | `METHOD path[?query]` operation identity |
+| `response_status` | `INT` | NOT NULL | Cached HTTP status |
+| `response_body` | `JSONB` | NOT NULL | Cached response body |
+| `response_headers` | `JSONB` | | Cached response headers |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL DEFAULT `now()` | |
+| `expires_at` | `TIMESTAMPTZ` | NOT NULL | TTL expiry |
+
+**Constraints**:
+
+```sql
+CONSTRAINT uq_idempotency_key_operation UNIQUE (idempotency_key, operation_key)
+```
+
+**Indexes**:
+
+```sql
+CREATE INDEX idx_idempotency_records_expires_at ON idempotency_records (expires_at);
+```
+
+> **Note**: The legacy `idempotency_keys` table from early migrations was removed in `V5__schema_cleanup_and_indexes.sql`.
 
 ---
 

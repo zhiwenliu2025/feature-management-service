@@ -88,6 +88,8 @@ fms:
   worker:
     publish:
       poll-interval-ms: 5000
+      initial-retry-delay: 5s
+      max-retry-delay: 5m
   observability:
     enabled: true
     metrics-poll-interval-ms: 30000

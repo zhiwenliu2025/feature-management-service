@@ -13,6 +13,7 @@ public record AuditEventResponse(
         String resourceId,
         String environment,
         Map<String, Object> diff,
+        Map<String, Object> metadata,
         Instant createdAt
 ) {
 }

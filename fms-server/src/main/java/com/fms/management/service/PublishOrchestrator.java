@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -317,8 +318,8 @@ public class PublishOrchestrator {
     }
 
     private void ensureNoPendingPublishJob(java.util.UUID flagId, String environment) {
-        if (publishJobRepository.existsByFlag_IdAndEnvironmentAndStatus(
-                flagId, environment, PublishJobStatus.pending)) {
+        if (publishJobRepository.existsByFlag_IdAndEnvironmentAndStatusIn(
+                flagId, environment, EnumSet.of(PublishJobStatus.pending, PublishJobStatus.processing))) {
             throw new FmsException(
                     FmsErrorCode.PUBLISH_IN_PROGRESS,
                     "A publish job is already pending for this flag in the environment.");
