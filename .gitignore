@@ -5,6 +5,7 @@ build/
 
 # IDE
 .idea/
+.cursor/
 *.iml
 *.ipr
 *.iws

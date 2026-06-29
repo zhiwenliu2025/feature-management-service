@@ -105,6 +105,7 @@
 |------|------|
 | Vaadin Platform | 25.1.7 |
 | Vaadin Spring Boot Starter | 25.1.7 |
+| Vaadin Theme (Aura) | 25.1.7 |
 
 ## 11. 客户端 SDK
 
