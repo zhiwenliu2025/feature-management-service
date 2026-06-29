@@ -8,7 +8,6 @@ import com.fms.domain.PublishJobEntity;
 import com.fms.domain.enums.PublishJobStatus;
 import com.fms.observability.FmsMetrics;
 import com.fms.repository.PublishJobRepository;
-import com.fms.sync.dto.SnapshotResponse;
 import com.fms.sync.service.SnapshotLoaderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

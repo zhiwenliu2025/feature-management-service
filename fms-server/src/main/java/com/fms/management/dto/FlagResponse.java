@@ -1,7 +1,6 @@
 package com.fms.management.dto;
 
 import com.fms.domain.enums.FlagStatus;
-import com.fms.domain.enums.FlagType;
 
 import java.time.Instant;
 import java.util.List;
