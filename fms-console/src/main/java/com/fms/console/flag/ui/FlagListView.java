@@ -35,9 +35,7 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import com.fms.console.shared.ui.RouteLinks;
-
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import com.fms.console.shared.ui.UiFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,6 +53,7 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
   private final TextField search = new TextField();
   private final ComboBox<String> statusFilter = new ComboBox<>("Status");
   private String cursor;
+  private final Button loadMore = new Button("Load more", e -> load(cursor));
 
   public FlagListView(
       FlagUiService flagUiService,
@@ -74,6 +73,8 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
     search.setWidth("280px");
     statusFilter.setItems("draft", "published", "archived");
     statusFilter.setClearButtonVisible(true);
+    statusFilter.setPlaceholder("All statuses");
+    statusFilter.setRequiredIndicatorVisible(false);
 
     Button refresh = new Button("Search", VaadinIcon.SEARCH.create(), e -> load(null));
     Button create = new Button("New flag", VaadinIcon.PLUS.create(), e -> openCreateDialog());
@@ -83,6 +84,7 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
     promote.setEnabled(accessControl.canPublish());
 
     HorizontalLayout toolbar = new HorizontalLayout(search, statusFilter, refresh, create, promote);
+    toolbar.addClassName("fms-toolbar");
     toolbar.setAlignItems(Alignment.END);
     toolbar.setWidthFull();
 
@@ -90,11 +92,11 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
     gridContainer.setPadding(false);
     gridContainer.setSpacing(true);
     gridContainer.setSizeFull();
+    gridContainer.addClassName("fms-grid-scroll");
     gridContainer.add(grid);
     setFlexGrow(1, gridContainer);
 
-    Button loadMore = new Button("Load more", e -> load(cursor));
-    loadMore.setId("load-more");
+    loadMore.setVisible(false);
 
     add(new PageHeader("Feature Flags"), toolbar, gridContainer, loadMore);
 
@@ -125,8 +127,7 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
         .setRenderer(new ComponentRenderer<>(f -> StatusBadge.forFlagStatus(f.status(), f.draftDirty())));
     grid.addColumn(f -> String.valueOf(f.defaultValue())).setHeader("Default");
     grid.addColumn(f -> f.tags() == null ? "" : String.join(", ", f.tags())).setHeader("Tags");
-    grid.addColumn(f -> f.updatedAt() == null ? "" :
-        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault()).format(f.updatedAt()))
+    grid.addColumn(f -> f.updatedAt() == null ? "" : UiFormat.formatInstant(f.updatedAt()))
         .setHeader("Updated");
 
     grid.addComponentColumn(flag -> {
@@ -198,6 +199,7 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
       grid.setItems(items);
       updateEmptyState(items);
       cursor = page.pagination().nextCursor();
+      loadMore.setVisible(cursor != null && !cursor.isBlank());
     } catch (FmsUiException ex) {
       ApiClientExceptionHandler.handle(ex);
     }

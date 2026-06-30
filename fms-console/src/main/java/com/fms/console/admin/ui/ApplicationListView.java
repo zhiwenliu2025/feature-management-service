@@ -28,6 +28,7 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import com.fms.console.shared.ui.RouteLinks;
+import com.fms.console.shared.ui.UiFormat;
 
 import java.util.List;
 
@@ -81,7 +82,7 @@ public class ApplicationListView extends VerticalLayout implements BeforeEnterOb
     grid.addColumn(ApplicationDto::name).setHeader("Name");
     grid.addColumn(ApplicationDto::ownerTeam).setHeader("Owner team");
     grid.addColumn(ApplicationDto::status).setHeader("Status");
-    grid.addColumn(ApplicationDto::createdAt).setHeader("Created");
+    grid.addColumn(a -> UiFormat.formatInstant(a.createdAt())).setHeader("Created");
     grid.addComponentColumn(app -> new Button("Edit", VaadinIcon.EDIT.create(), e -> openEdit(app)));
     grid.setSizeFull();
   }

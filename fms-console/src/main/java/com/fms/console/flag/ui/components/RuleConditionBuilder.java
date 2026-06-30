@@ -1,6 +1,7 @@
 package com.fms.console.flag.ui.components;
 
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.customfield.CustomField;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -13,6 +14,11 @@ import java.util.Map;
 
 public class RuleConditionBuilder extends CustomField<Map<String, Object>> {
 
+  private static final List<String> ATTRIBUTES = List.of(
+      "region", "userId", "appVersion", "rolloutPercent");
+  private static final List<String> OPERATORS = List.of(
+      "equals", "not_equals", "in", "not_in", "gt", "gte", "lt", "lte", "contains");
+
   private final VerticalLayout container = new VerticalLayout();
   private final List<ConditionRow> rows = new ArrayList<>();
 
@@ -20,7 +26,7 @@ public class RuleConditionBuilder extends CustomField<Map<String, Object>> {
     setWidthFull();
     container.setPadding(false);
     container.setSpacing(true);
-    Button add = new Button("Add condition", e -> addRow("", "equals", ""));
+    Button add = new Button("Add condition", e -> addRow("region", "in", ""));
     addRow("region", "in", "US");
     add(add, container);
     add(container);
@@ -44,7 +50,7 @@ public class RuleConditionBuilder extends CustomField<Map<String, Object>> {
     rows.clear();
     container.removeAll();
     if (value == null || value.isEmpty()) {
-      addRow("", "equals", "");
+      addRow("region", "in", "");
       return;
     }
     value.forEach((k, v) -> addRow(k, inferOp(v), formatValue(v)));
@@ -98,17 +104,23 @@ public class RuleConditionBuilder extends CustomField<Map<String, Object>> {
   }
 
   private class ConditionRow {
-    final TextField keyField = new TextField("Attribute");
-    final TextField opField = new TextField("Operator");
+    final ComboBox<String> keyField = new ComboBox<>("Attribute");
+    final ComboBox<String> opField = new ComboBox<>("Operator");
     final TextField valueField = new TextField("Value");
 
     ConditionRow(String key, String op, String val) {
+      keyField.setItems(ATTRIBUTES);
+      keyField.setAllowCustomValue(true);
       keyField.setValue(key);
+      opField.setItems(OPERATORS);
       opField.setValue(op);
       valueField.setValue(val);
       keyField.setWidth("160px");
-      opField.setWidth("120px");
+      opField.setWidth("140px");
       valueField.setWidthFull();
+      keyField.setRequiredIndicatorVisible(true);
+      opField.setRequiredIndicatorVisible(true);
+      valueField.setRequiredIndicatorVisible(true);
     }
 
     Div layout() {

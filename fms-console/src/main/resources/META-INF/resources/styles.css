@@ -401,6 +401,8 @@ vaadin-login-overlay.fms-login-overlay::part(overlay) {
 }
 
 .fms-kpi-card {
+  display: flex;
+  flex-direction: column;
   padding: 1rem 1.25rem;
   min-width: 140px;
   flex: 1;
@@ -425,4 +427,78 @@ vaadin-login-overlay.fms-login-overlay::part(overlay) {
 .fms-publish-tracker {
   gap: 1rem;
   padding: 0.5rem 0;
+}
+
+/* ── Decision trace summary ─────────────────────────────────────── */
+
+.fms-decision-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.fms-decision-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.fms-decision-summary-label {
+  font-size: var(--aura-font-size-s);
+  color: var(--vaadin-text-color-secondary);
+}
+
+.fms-decision-summary-value {
+  font-weight: 600;
+}
+
+.fms-summary-value-success {
+  color: var(--aura-green);
+}
+
+.fms-summary-value-muted {
+  color: var(--vaadin-text-color-secondary);
+}
+
+.fms-decision-trace-step-title {
+  font-weight: 600;
+}
+
+.fms-decision-trace-step-detail {
+  margin: 0.25rem 0 0;
+  color: var(--vaadin-text-color-secondary);
+  font-size: var(--aura-font-size-s);
+}
+
+.fms-decision-trace-release {
+  color: var(--vaadin-text-color-secondary);
+  font-size: var(--aura-font-size-s);
+  margin-bottom: 0.5rem;
+}
+
+/* ── Toolbar & responsive ───────────────────────────────────────── */
+
+.fms-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.fms-grid-scroll {
+  overflow-x: auto;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .fms-toolbar vaadin-text-field,
+  .fms-toolbar vaadin-combo-box {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .fms-toolbar vaadin-button {
+    flex: 1 1 auto;
+  }
 }

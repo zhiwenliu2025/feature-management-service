@@ -28,6 +28,7 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import com.fms.console.shared.ui.RouteLinks;
+import com.fms.console.shared.ui.UiFormat;
 
 import java.util.List;
 import java.util.Map;
@@ -75,7 +76,7 @@ public class ReleaseListView extends VerticalLayout implements BeforeEnterObserv
         .setRenderer(new ComponentRenderer<>(r -> RouteLinks.release(r.releaseId(), r.releaseId())));
     grid.addColumn(ReleaseSummaryDto::version).setHeader("Version");
     grid.addColumn(ReleaseSummaryDto::title).setHeader("Title");
-    grid.addColumn(ReleaseSummaryDto::createdAt).setHeader("Created");
+    grid.addColumn(r -> UiFormat.formatInstant(r.createdAt())).setHeader("Created");
     grid.addColumn(ReleaseSummaryDto::createdBy).setHeader("Created by");
     grid.setSizeFull();
   }

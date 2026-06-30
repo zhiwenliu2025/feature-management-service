@@ -34,4 +34,8 @@ public final class RouteLinks {
   public static RouteParameters flagParams(String flagKey) {
     return new RouteParameters("flagKey", flagKey);
   }
+
+  public static RouteParameters appParams(String appId) {
+    return new RouteParameters("appId", appId);
+  }
 }

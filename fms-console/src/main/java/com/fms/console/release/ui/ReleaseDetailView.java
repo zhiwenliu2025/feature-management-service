@@ -9,6 +9,7 @@ import com.fms.console.shared.ui.AccessControlService;
 import com.fms.console.shared.ui.ForbiddenView;
 import com.fms.console.shared.ui.MainLayout;
 import com.fms.console.shared.ui.LayoutUiService;
+import com.fms.console.shared.ui.components.EmptyState;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
@@ -18,6 +19,8 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.PermitAll;
+
+import java.util.List;
 
 @Route(value = "releases/:releaseId", layout = MainLayout.class)
 @PermitAll
@@ -56,22 +59,38 @@ public class ReleaseDetailView extends VerticalLayout implements BeforeEnterObse
       H2 title = new H2(release.releaseId());
       title.addClassName("fms-page-title");
       add(title,
-          new Paragraph(release.title() + " · v" + release.version()),
-          new Paragraph(release.description() == null ? "" : release.description()));
+          new Paragraph(release.title() + " · v" + release.version()));
+
+      if (release.description() != null && !release.description().isBlank()) {
+        add(new Paragraph(release.description()));
+      }
 
       if (release.metadata() != null && !release.metadata().isEmpty()) {
         add(new Paragraph("CI metadata: " + release.metadata()));
       }
 
-      Grid<LinkedFlagDto> grid = new Grid<>(LinkedFlagDto.class, false);
-      grid.addColumn(LinkedFlagDto::flagKey).setHeader("Flag");
-      grid.addColumn(LinkedFlagDto::appId).setHeader("Application");
-      grid.addColumn(LinkedFlagDto::environment).setHeader("Environment");
-      grid.addColumn(LinkedFlagDto::configVersion).setHeader("Config version");
-      grid.setItems(release.flags() == null ? java.util.List.of() : release.flags());
-      grid.setSizeFull();
-      add(grid);
-      setFlexGrow(1, grid);
+      List<LinkedFlagDto> flags = release.flags() == null ? List.of() : release.flags();
+      VerticalLayout gridContainer = new VerticalLayout();
+      gridContainer.setPadding(false);
+      gridContainer.setSizeFull();
+
+      if (flags.isEmpty()) {
+        gridContainer.add(new EmptyState(
+            "No linked flags",
+            "Flags published under this release will appear here."));
+      } else {
+        Grid<LinkedFlagDto> grid = new Grid<>(LinkedFlagDto.class, false);
+        grid.addClassName("fms-grid-compact");
+        grid.addColumn(LinkedFlagDto::flagKey).setHeader("Flag");
+        grid.addColumn(LinkedFlagDto::appId).setHeader("Application");
+        grid.addColumn(LinkedFlagDto::environment).setHeader("Environment");
+        grid.addColumn(LinkedFlagDto::configVersion).setHeader("Config version");
+        grid.setItems(flags);
+        grid.setSizeFull();
+        gridContainer.add(grid);
+      }
+      add(gridContainer);
+      setFlexGrow(1, gridContainer);
     } catch (FmsUiException ex) {
       ApiClientExceptionHandler.handle(ex);
     }

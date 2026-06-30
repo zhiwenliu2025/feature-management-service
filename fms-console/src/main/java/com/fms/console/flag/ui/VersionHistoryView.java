@@ -13,7 +13,10 @@ import com.fms.console.shared.ui.ForbiddenView;
 import com.fms.console.shared.ui.GlobalContextBar;
 import com.fms.console.shared.ui.MainLayout;
 import com.fms.console.shared.ui.LayoutUiService;
+import com.fms.console.shared.ui.RouteLinks;
+import com.fms.console.shared.ui.UiFormat;
 import com.fms.console.shared.ui.components.DiffPanel;
+import com.fms.console.shared.ui.components.EmptyState;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
 import com.fms.console.shared.ui.components.FmsConfirmDialog;
 import com.fms.console.shared.ui.components.FmsNotification;
@@ -26,6 +29,8 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.PermitAll;
 
+import java.util.List;
+
 @Route(value = "flags/:flagKey/versions", layout = MainLayout.class)
 @PermitAll
 public class VersionHistoryView extends VerticalLayout implements BeforeEnterObserver {
@@ -36,6 +41,7 @@ public class VersionHistoryView extends VerticalLayout implements BeforeEnterObs
 
   private String flagKey;
   private final Grid<FlagVersionSummaryDto> grid = new Grid<>(FlagVersionSummaryDto.class, false);
+  private final VerticalLayout gridContainer = new VerticalLayout();
   private final VerticalLayout diffArea = new VerticalLayout();
 
   public VersionHistoryView(FlagUiService flagUiService, AccessControlService accessControl, LayoutUiService layoutUi) {
@@ -49,8 +55,12 @@ public class VersionHistoryView extends VerticalLayout implements BeforeEnterObs
     H2 title = new H2("Version history");
     title.addClassName("fms-page-title");
     configureGrid();
-    add(title, grid, diffArea);
-    setFlexGrow(1, grid);
+    gridContainer.setPadding(false);
+    gridContainer.setSpacing(true);
+    gridContainer.setSizeFull();
+    gridContainer.add(grid);
+    add(title, gridContainer, diffArea);
+    setFlexGrow(1, gridContainer);
   }
 
   @Override
@@ -62,14 +72,15 @@ public class VersionHistoryView extends VerticalLayout implements BeforeEnterObs
     flagKey = event.getRouteParameters().get("flagKey").orElse("");
     layoutUi.setBreadcrumb(new FmsBreadcrumb()
         .segment("Flags", FlagListView.class)
-        .current(flagKey + " / versions"));
+        .segment(flagKey, FlagDetailView.class, RouteLinks.flagParams(flagKey))
+        .current("Versions"));
     load();
   }
 
   private void configureGrid() {
     grid.addColumn(FlagVersionSummaryDto::flagVersion).setHeader("Version");
     grid.addColumn(FlagVersionSummaryDto::configVersion).setHeader("Config version");
-    grid.addColumn(FlagVersionSummaryDto::publishedAt).setHeader("Published at");
+    grid.addColumn(v -> UiFormat.formatInstant(v.publishedAt())).setHeader("Published at");
     grid.addColumn(FlagVersionSummaryDto::publishedBy).setHeader("Published by");
     grid.addColumn(FlagVersionSummaryDto::comment).setHeader("Comment");
     grid.addComponentColumn(v -> {
@@ -81,11 +92,23 @@ public class VersionHistoryView extends VerticalLayout implements BeforeEnterObs
     grid.setSizeFull();
   }
 
+  private void updateEmptyState(List<FlagVersionSummaryDto> items) {
+    gridContainer.removeAll();
+    if (items.isEmpty()) {
+      gridContainer.add(new EmptyState(
+          "No published versions",
+          "Publish this flag to create version history."));
+    } else {
+      gridContainer.add(grid);
+    }
+  }
+
   private void load() {
     try {
       PageResponse<FlagVersionSummaryDto> page = flagUiService.listVersions(
           GlobalContextBar.resolveAppId(), flagKey, GlobalContextBar.resolveEnvironment(), 50);
       grid.setItems(page.data());
+      updateEmptyState(page.data());
     } catch (FmsUiException ex) {
       ApiClientExceptionHandler.handle(ex);
     }

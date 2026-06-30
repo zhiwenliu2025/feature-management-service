@@ -16,6 +16,7 @@ import com.fms.console.shared.ui.ForbiddenView;
 import com.fms.console.shared.ui.GlobalContextBar;
 import com.fms.console.shared.ui.MainLayout;
 import com.fms.console.shared.ui.LayoutUiService;
+import com.fms.console.shared.ui.components.EmptyState;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
 import com.fms.console.shared.ui.components.FmsConfirmDialog;
 import com.fms.console.shared.ui.components.FmsNotification;
@@ -55,6 +56,7 @@ public class RuleEditorView extends VerticalLayout implements BeforeEnterObserve
   private String environment;
   private List<RuleDto> rules = new ArrayList<>();
   private final Grid<RuleDto> grid = new Grid<>(RuleDto.class, false);
+  private final VerticalLayout gridContainer = new VerticalLayout();
 
   public RuleEditorView(
       FlagUiService flagUiService,
@@ -73,8 +75,13 @@ public class RuleEditorView extends VerticalLayout implements BeforeEnterObserve
     H2 title = new H2("Rule editor");
     title.addClassName("fms-page-title");
     configureGrid();
-    add(title, buildEnvBar(), grid, buildActions());
-    setFlexGrow(1, grid);
+    gridContainer.setPadding(false);
+    gridContainer.setSpacing(true);
+    gridContainer.setSizeFull();
+    gridContainer.addClassName("fms-grid-scroll");
+    gridContainer.add(grid);
+    add(title, buildEnvBar(), gridContainer, buildActions());
+    setFlexGrow(1, gridContainer);
   }
 
   @Override
@@ -141,8 +148,22 @@ public class RuleEditorView extends VerticalLayout implements BeforeEnterObserve
       rules = new ArrayList<>(flag.rules().getOrDefault(environment, List.of()));
       rules.sort(Comparator.comparingInt(RuleDto::priority));
       grid.setItems(rules);
+      updateEmptyState();
     } catch (FmsUiException ex) {
       ApiClientExceptionHandler.handle(ex);
+    }
+  }
+
+  private void updateEmptyState() {
+    gridContainer.removeAll();
+    if (rules.isEmpty()) {
+      gridContainer.add(new EmptyState(
+          "No rules",
+          "Add targeting rules to control when this flag is enabled.",
+          accessControl.canWriteFlags() ? "Add rule" : null,
+          accessControl.canWriteFlags() ? () -> openRuleDialog(null) : null));
+    } else {
+      gridContainer.add(grid);
     }
   }
 
@@ -229,6 +250,7 @@ public class RuleEditorView extends VerticalLayout implements BeforeEnterObserve
       }
       rules.sort(Comparator.comparingInt(RuleDto::priority));
       grid.setItems(rules);
+      updateEmptyState();
       UnsavedChangesGuard.markDirty(true);
       dialog.close();
     });

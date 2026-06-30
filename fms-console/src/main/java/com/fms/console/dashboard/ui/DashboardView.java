@@ -13,6 +13,7 @@ import com.fms.console.shared.ui.AccessControlService;
 import com.fms.console.shared.ui.ForbiddenView;
 import com.fms.console.shared.ui.GlobalContextBar;
 import com.fms.console.shared.ui.LayoutUiService;
+import com.fms.console.shared.ui.UiFormat;
 import com.fms.console.shared.ui.components.EmptyState;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
 import com.fms.console.shared.ui.components.PageHeader;
@@ -135,7 +136,7 @@ public class DashboardView extends VerticalLayout implements BeforeEnterObserver
     }
     Grid<AuditEventDto> grid = new Grid<>(AuditEventDto.class, false);
     grid.addClassName("fms-grid-compact");
-    grid.addColumn(AuditEventDto::createdAt).setHeader("Time");
+    grid.addColumn(e -> UiFormat.formatInstant(e.createdAt())).setHeader("Time");
     grid.addColumn(AuditEventDto::actor).setHeader("Actor");
     grid.addColumn(AuditEventDto::action).setHeader("Action");
     grid.addColumn(AuditEventDto::resourceId).setHeader("Resource");
@@ -173,7 +174,7 @@ public class DashboardView extends VerticalLayout implements BeforeEnterObserver
     section.setPadding(false);
     if (snap.environmentConfig() != null) {
       section.add(new Span("Config version: " + snap.environmentConfig().currentConfigVersion()));
-      section.add(new Span("Last updated: " + snap.environmentConfig().updatedAt()));
+      section.add(new Span("Last updated: " + UiFormat.formatInstant(snap.environmentConfig().updatedAt())));
     } else {
       section.add(new EmptyState("No environment config", "Configuration details are not available."));
     }

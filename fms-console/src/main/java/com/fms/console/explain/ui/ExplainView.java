@@ -21,6 +21,7 @@ import com.fms.console.shared.ui.components.PageHeader;
 import com.fms.console.shared.ui.components.SectionCard;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.checkbox.Checkbox;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -67,20 +68,52 @@ public class ExplainView extends VerticalLayout implements BeforeEnterObserver {
 
     TextField flagKey = new TextField("Flag key");
     flagKey.setRequiredIndicatorVisible(true);
-    TextField environment = new TextField("Environment");
+
+    ComboBox<String> environment = new ComboBox<>("Environment");
+    environment.setItems("dev", "staging", "prod");
     environment.setValue(GlobalContextBar.resolveEnvironment());
+    environment.setRequiredIndicatorVisible(true);
+
     TextField userId = new TextField("User ID");
+    userId.setRequiredIndicatorVisible(true);
+    userId.setHelperText("Required to evaluate targeting rules.");
+
     TextField region = new TextField("Region");
+    region.setRequiredIndicatorVisible(false);
+    region.setHelperText("Optional targeting attribute.");
+
     TextField appVersion = new TextField("App version");
+    appVersion.setRequiredIndicatorVisible(false);
+
     Checkbox replay = new Checkbox("Historical replay");
+    replay.setRequiredIndicatorVisible(false);
+
     TextField configVersion = new TextField("Config version (replay)");
+    configVersion.setRequiredIndicatorVisible(false);
+    configVersion.setVisible(false);
+    configVersion.setHelperText("Required when historical replay is enabled.");
+
+    replay.addValueChangeListener(e -> {
+      boolean on = Boolean.TRUE.equals(e.getValue());
+      configVersion.setVisible(on);
+      configVersion.setRequiredIndicatorVisible(on);
+    });
 
     Checkbox showPii = new Checkbox("Show full user ID");
+    showPii.setRequiredIndicatorVisible(false);
     showPii.setEnabled(accessControl.canExplainPii());
     showPii.addValueChangeListener(e -> showFullUserId = Boolean.TRUE.equals(e.getValue()));
 
     Button run = new Button("Run explain", VaadinIcon.SEARCH.create(), e -> {
       try {
+        if (flagKey.isEmpty() || userId.isEmpty()) {
+          FmsNotification.error("Flag key and user ID are required.");
+          return;
+        }
+        if (replay.getValue() && configVersion.isEmpty()) {
+          FmsNotification.error("Config version is required for historical replay.");
+          return;
+        }
         EvaluateContextDto ctx = new EvaluateContextDto(
             maskUserId(userId.getValue()),
             null,
@@ -89,7 +122,7 @@ public class ExplainView extends VerticalLayout implements BeforeEnterObserver {
             Map.of());
         ExplainResponseDto response;
         if (replay.getValue()) {
-          Long cv = configVersion.isEmpty() ? null : Long.parseLong(configVersion.getValue());
+          Long cv = Long.parseLong(configVersion.getValue());
           response = explainUiService.replay(flagKey.getValue(), new ReplayExplainRequestDto(
               environment.getValue(),
               GlobalContextBar.resolveAppId(),
@@ -111,7 +144,6 @@ public class ExplainView extends VerticalLayout implements BeforeEnterObserver {
         FmsNotification.error("Invalid input.");
       }
     });
-    run.getElement().setAttribute("aria-label", "Run explain query");
 
     form.add(flagKey, environment, userId, region, appVersion, replay, configVersion, showPii, run);
     return form;

@@ -9,8 +9,10 @@ import com.fms.console.client.FmsUiException;
 import com.fms.console.client.dto.AuditDtos.AuditEventDto;
 import com.fms.console.shared.ui.AccessControlService;
 import com.fms.console.shared.ui.ForbiddenView;
+import com.fms.console.shared.ui.GlobalContextBar;
 import com.fms.console.shared.ui.MainLayout;
 import com.fms.console.shared.ui.LayoutUiService;
+import com.fms.console.shared.ui.UiFormat;
 import com.fms.console.shared.ui.components.EmptyState;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
 import com.fms.console.shared.ui.components.PageHeader;
@@ -47,12 +49,12 @@ public class AuditLogView extends VerticalLayout implements BeforeEnterObserver 
 
   private final Grid<AuditEventDto> grid = new Grid<>(AuditEventDto.class, false);
   private final VerticalLayout gridContainer = new VerticalLayout();
-  private final DateTimePicker from = new DateTimePicker("From");
-  private final DateTimePicker to = new DateTimePicker("To");
+  private final DateTimePicker from = new DateTimePicker("Start time");
+  private final DateTimePicker to = new DateTimePicker("End time");
   private final ComboBox<String> action = new ComboBox<>("Action");
   private final TextField actor = new TextField("Actor");
   private final TextField resource = new TextField("Resource");
-  private final TextField environment = new TextField("Environment");
+  private final ComboBox<String> environment = new ComboBox<>("Environment");
 
   public AuditLogView(AuditUiService auditUiService, AccessControlService accessControl, LayoutUiService layoutUi) {
     this.auditUiService = auditUiService;
@@ -65,14 +67,31 @@ public class AuditLogView extends VerticalLayout implements BeforeEnterObserver 
 
     action.setItems("publish", "rollback", "kill_switch_on", "kill_switch_off", "flag_create", "flag_update");
     action.setClearButtonVisible(true);
+    action.setPlaceholder("All actions");
+    action.setRequiredIndicatorVisible(false);
+
+    environment.setItems("dev", "staging", "prod");
+    environment.setValue(GlobalContextBar.resolveEnvironment());
+    environment.setClearButtonVisible(true);
+    environment.setPlaceholder("All environments");
+    environment.setRequiredIndicatorVisible(false);
+
+    from.setRequiredIndicatorVisible(false);
+    to.setRequiredIndicatorVisible(false);
+    actor.setRequiredIndicatorVisible(false);
+    actor.setPlaceholder("Filter by actor");
+    resource.setRequiredIndicatorVisible(false);
+    resource.setPlaceholder("Filter by resource ID");
 
     Button search = new Button("Search", VaadinIcon.SEARCH.create(), e -> load(null));
     HorizontalLayout filters = new HorizontalLayout(from, to, action, actor, resource, environment, search);
+    filters.addClassName("fms-toolbar");
     filters.setWidthFull();
     configureGrid();
     gridContainer.setPadding(false);
     gridContainer.setSpacing(true);
     gridContainer.setSizeFull();
+    gridContainer.addClassName("fms-grid-scroll");
     gridContainer.add(grid);
     add(new PageHeader("Audit log"), filters, gridContainer);
     setFlexGrow(1, gridContainer);
@@ -89,7 +108,7 @@ public class AuditLogView extends VerticalLayout implements BeforeEnterObserver 
 
   private void configureGrid() {
     grid.addClassName("fms-grid-compact");
-    grid.addColumn(AuditEventDto::createdAt).setHeader("Time").setFlexGrow(1);
+    grid.addColumn(e -> UiFormat.formatInstant(e.createdAt())).setHeader("Time").setFlexGrow(1);
     grid.addColumn(AuditEventDto::actor).setHeader("Actor");
     grid.addColumn(AuditEventDto::action).setHeader("Action");
     grid.addColumn(event -> event.resourceId()).setHeader("Resource")

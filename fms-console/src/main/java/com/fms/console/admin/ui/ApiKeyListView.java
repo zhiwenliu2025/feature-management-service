@@ -28,6 +28,8 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
+import com.fms.console.shared.ui.RouteLinks;
+import com.fms.console.shared.ui.UiFormat;
 
 import java.util.List;
 import java.util.UUID;
@@ -62,7 +64,8 @@ public class ApiKeyListView extends VerticalLayout implements BeforeEnterObserve
     appId = event.getRouteParameters().get("appId").orElse("");
     layoutUi.setBreadcrumb(new FmsBreadcrumb()
         .segment("Applications", ApplicationListView.class)
-        .current(appId + " / API keys"));
+        .segment(appId, ApiKeyListView.class, RouteLinks.appParams(appId))
+        .current("API keys"));
     render();
   }
 
@@ -80,8 +83,8 @@ public class ApiKeyListView extends VerticalLayout implements BeforeEnterObserve
     grid.addColumn(ApiKeyDto::keyPrefix).setHeader("Key prefix");
     grid.addColumn(ApiKeyDto::name).setHeader("Name");
     grid.addColumn(k -> k.scopes() == null ? "" : String.join(", ", k.scopes())).setHeader("Scopes");
-    grid.addColumn(ApiKeyDto::createdAt).setHeader("Created");
-    grid.addColumn(ApiKeyDto::revokedAt).setHeader("Revoked");
+    grid.addColumn(k -> UiFormat.formatInstant(k.createdAt())).setHeader("Created");
+    grid.addColumn(k -> UiFormat.formatInstant(k.revokedAt())).setHeader("Revoked");
     grid.addComponentColumn(key -> {
       Button revoke = new Button("Revoke", VaadinIcon.BAN.create(), e -> FmsConfirmDialog.confirmDestructive(
           "Revoke API key",

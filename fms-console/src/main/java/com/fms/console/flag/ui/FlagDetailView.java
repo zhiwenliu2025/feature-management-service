@@ -146,9 +146,6 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
     HorizontalLayout nav = new HorizontalLayout(
         RouteLinks.to("Rules", RuleEditorView.class, RouteLinks.flagParams(flagKey)),
         RouteLinks.to("Version history", VersionHistoryView.class, RouteLinks.flagParams(flagKey)));
-    if (accessControl.canPublish()) {
-      nav.add(new Button("Publish tab", e -> showPublishTab()));
-    }
 
     Tab overview = new Tab("Overview");
     Tab publish = new Tab("Publish");
@@ -184,15 +181,21 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
     FormLayout form = new FormLayout();
     TextField name = new TextField("Name");
     name.setValue(flag.name());
+    name.setRequiredIndicatorVisible(true);
     TextArea description = new TextArea("Description");
     description.setValue(flag.description() == null ? "" : flag.description());
+    description.setRequiredIndicatorVisible(false);
     TextField defaultValue = new TextField("Default value");
     defaultValue.setValue(String.valueOf(flag.defaultValue()));
+    defaultValue.setRequiredIndicatorVisible(false);
     TextField tags = new TextField("Tags");
     tags.setValue(flag.tags() == null ? "" : String.join(",", flag.tags()));
+    tags.setRequiredIndicatorVisible(false);
+    tags.setHelperText("Comma-separated tags.");
     TextField keyField = new TextField("Key");
     keyField.setValue(flag.key());
     keyField.setReadOnly(true);
+    keyField.setRequiredIndicatorVisible(false);
     form.add(keyField, name, description, defaultValue, tags);
 
     Button save = new Button("Save draft", VaadinIcon.CHECK.create(), e -> {
@@ -240,11 +243,15 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
     ComboBox<String> environment = new ComboBox<>("Environment");
     environment.setItems("dev", "staging", "prod");
     environment.setValue(GlobalContextBar.resolveEnvironment());
+    environment.setRequiredIndicatorVisible(true);
     ComboBox<String> release = new ComboBox<>("Release");
     try {
       release.setItems(releaseUiService.list(50).data().stream().map(r -> r.releaseId()).toList());
     } catch (Exception ignored) {
     }
+    release.setPlaceholder("Select a release (optional)");
+    release.setHelperText("Link this publish to a release for traceability.");
+    release.setRequiredIndicatorVisible(false);
     TextField comment = new TextField("Comment");
     comment.setRequiredIndicatorVisible(true);
     comment.setWidthFull();
@@ -279,12 +286,24 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
     ComboBox<String> scope = new ComboBox<>("Scope");
     scope.setItems("global", "region");
     scope.setValue("global");
+    scope.setRequiredIndicatorVisible(false);
     TextField region = new TextField("Region code");
+    region.setVisible(false);
+    region.setRequiredIndicatorVisible(false);
+    region.setHelperText("Required when scope is region.");
     TextField reason = new TextField("Reason / incident");
     reason.setWidthFull();
+    reason.setRequiredIndicatorVisible(true);
     ComboBox<String> forced = new ComboBox<>("Forced value");
     forced.setItems("false", "true");
     forced.setValue("false");
+    forced.setRequiredIndicatorVisible(false);
+
+    scope.addValueChangeListener(e -> {
+      boolean regional = "region".equals(e.getValue());
+      region.setVisible(regional);
+      region.setRequiredIndicatorVisible(regional);
+    });
 
     Button activate = new Button("Activate kill switch", VaadinIcon.BAN.create(), e -> FmsConfirmDialog.confirmDestructive(
         "Activate kill switch",
@@ -292,6 +311,10 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
         () -> {
           if (reason.isEmpty()) {
             FmsNotification.error("Reason is required.");
+            return;
+          }
+          if ("region".equals(scope.getValue()) && region.isEmpty()) {
+            FmsNotification.error("Region code is required for regional scope.");
             return;
           }
           try {
