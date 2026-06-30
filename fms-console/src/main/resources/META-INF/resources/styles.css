@@ -4,23 +4,217 @@ html {
   --aura-accent-color-light: hsl(214, 90%, 48%);
   --aura-accent-color-dark: hsl(214, 80%, 65%);
   --aura-base-size: 16;
-  color-scheme: light dark;
+  --aura-base-radius: 6;
+  --aura-contrast-level: 1;
+  /* Dark navigation chrome; content area follows OS / user preference */
+  color-scheme: dark;
+  --aura-content-color-scheme: light dark;
 }
+
+/* ── App shell layout ─────────────────────────────────────────────── */
+
+.fms-app-shell::part(drawer) {
+  border-inline-end: 1px solid var(--vaadin-border-color-secondary);
+}
+
+.fms-drawer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+}
+
+.fms-drawer-header {
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--vaadin-border-color-secondary);
+}
+
+.fms-drawer-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.fms-drawer-brand-icon {
+  color: var(--aura-accent-color-dark);
+  flex-shrink: 0;
+}
+
+.fms-drawer-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.fms-drawer-brand-title {
+  margin: 0;
+  font-size: var(--aura-font-size-l);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.fms-drawer-brand-subtitle {
+  margin: 0;
+  font-size: var(--aura-font-size-xs);
+  color: var(--vaadin-text-color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fms-drawer-nav {
+  flex: 1;
+  padding: 0.5rem 0;
+  overflow-y: auto;
+}
+
+.fms-navbar {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-gap, 0.75rem);
+  width: 100%;
+  min-height: 3rem;
+}
+
+.fms-navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: var(--aura-font-size-m);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fms-navbar-context {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.fms-navbar-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.fms-content-chrome {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.fms-banner-slot:empty {
+  display: none;
+}
+
+.fms-breadcrumb-slot:empty {
+  display: none;
+}
+
+.fms-content-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.fms-page-content {
+  padding: var(--vaadin-padding-m, 1rem);
+}
+
+/* ── Context bar ──────────────────────────────────────────────────── */
 
 .fms-context-bar {
   display: flex;
   align-items: center;
-  gap: var(--vaadin-gap, 0.5rem);
+  gap: var(--vaadin-gap, 0.75rem);
 }
+
+.fms-context-bar vaadin-combo-box {
+  --vaadin-field-default-width: 12rem;
+}
+
+/* ── Typography ───────────────────────────────────────────────────── */
 
 .fms-page-title {
   margin: 0;
   font-size: var(--aura-font-size-xl);
 }
 
+.fms-page-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: var(--aura-font-size-m);
+  color: var(--vaadin-text-color-secondary);
+  font-weight: 400;
+}
+
+.fms-section-title {
+  margin: 0 0 0.75rem;
+  font-size: var(--aura-font-size-l);
+  font-weight: 600;
+}
+
 .fms-placeholder {
   color: var(--vaadin-text-color-secondary);
 }
+
+.fms-monospace {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+  font-size: var(--aura-font-size-s);
+}
+
+/* ── Page header ──────────────────────────────────────────────────── */
+
+.fms-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.fms-page-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.fms-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-gap, 0.5rem);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.fms-page-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+/* ── Section cards ────────────────────────────────────────────────── */
+
+.fms-section-card {
+  padding: 1rem 1.25rem;
+  border-radius: var(--vaadin-radius-m);
+  margin-bottom: 0.75rem;
+}
+
+.fms-section-card:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Status badges ────────────────────────────────────────────────── */
 
 .fms-badge {
   display: inline-block;
@@ -28,23 +222,79 @@ html {
   border-radius: var(--vaadin-radius-m, 4px);
   font-size: var(--aura-font-size-s);
   font-weight: 600;
+  line-height: 1.4;
 }
 
-.fms-badge-neutral { background: var(--vaadin-background-container-strong); }
-.fms-badge-success { background: hsl(145, 60%, 90%); color: hsl(145, 50%, 25%); }
-.fms-badge-warning { background: hsl(35, 90%, 90%); color: hsl(35, 70%, 30%); }
-.fms-badge-error { background: hsl(0, 80%, 92%); color: hsl(0, 60%, 35%); }
-.fms-badge-muted { opacity: 0.7; }
-.fms-badge-primary { background: hsl(214, 90%, 92%); color: hsl(214, 70%, 30%); }
+.fms-badge-neutral {
+  background: var(--vaadin-background-container-strong);
+  color: var(--vaadin-text-color);
+}
+
+.fms-badge-success {
+  background: color-mix(in srgb, var(--aura-green) 18%, transparent);
+  color: var(--aura-green);
+}
+
+.fms-badge-warning {
+  background: color-mix(in srgb, var(--aura-orange) 18%, transparent);
+  color: var(--aura-orange);
+}
+
+.fms-badge-error {
+  background: color-mix(in srgb, var(--aura-red) 18%, transparent);
+  color: var(--aura-red);
+}
+
+.fms-badge-muted {
+  opacity: 0.65;
+  background: var(--vaadin-background-container-strong);
+}
+
+.fms-badge-primary {
+  background: color-mix(in srgb, var(--aura-accent-color-light) 18%, transparent);
+  color: var(--aura-accent-color-light);
+}
+
+.fms-role-chip {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  margin: 0.125rem 0;
+  border-radius: var(--vaadin-radius-s);
+  font-size: var(--aura-font-size-xs);
+  background: var(--vaadin-background-container-strong);
+  color: var(--vaadin-text-color-secondary);
+}
+
+/* ── Banners & alerts ─────────────────────────────────────────────── */
 
 .fms-kill-switch-banner {
   width: 100%;
   padding: 0.5rem 1rem;
-  background: hsl(0, 80%, 92%);
-  color: hsl(0, 60%, 35%);
+  background: color-mix(in srgb, var(--aura-red) 15%, transparent);
+  color: var(--aura-red);
   font-weight: 600;
-  border-bottom: 2px solid hsl(0, 70%, 50%);
+  border-bottom: 2px solid var(--aura-red);
 }
+
+.fms-draft-bar {
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--aura-orange) 12%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--aura-orange) 40%, transparent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--vaadin-text-color);
+}
+
+.fms-api-key-warning {
+  padding: 1rem;
+  background: color-mix(in srgb, var(--aura-orange) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--aura-orange) 40%, transparent);
+  border-radius: var(--vaadin-radius-m);
+  margin-bottom: 1rem;
+}
+
+/* ── Breadcrumb ───────────────────────────────────────────────────── */
 
 .fms-breadcrumb {
   font-size: var(--aura-font-size-s);
@@ -62,13 +312,54 @@ html {
 
 .fms-breadcrumb-slot {
   width: 100%;
-  padding: 0.25rem 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--vaadin-border-color-secondary);
+  background: var(--vaadin-background-container);
 }
+
+/* ── Empty state & login ──────────────────────────────────────────── */
 
 .fms-empty-state {
   text-align: center;
-  padding: 2rem;
+  padding: 2.5rem 1.5rem;
+  max-width: 28rem;
+  margin: 2rem auto;
 }
+
+.fms-empty-state-icon {
+  color: var(--vaadin-text-color-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.fms-forbidden-card {
+  text-align: center;
+  padding: 2.5rem;
+  max-width: 32rem;
+  margin: 3rem auto;
+}
+
+.fms-login-view {
+  min-height: 100vh;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--aura-accent-color-light) 8%, var(--vaadin-background-container)),
+    var(--vaadin-background-container)
+  );
+}
+
+.fms-login-overlay {
+  margin: auto;
+}
+
+vaadin-login-overlay.fms-login-overlay::part(overlay) {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--aura-accent-color-light) 8%, var(--vaadin-background-container)),
+    var(--vaadin-background-container)
+  );
+}
+
+/* ── Data display ─────────────────────────────────────────────────── */
 
 .fms-grid-compact vaadin-grid-cell-content {
   padding-top: 0.25rem;
@@ -76,7 +367,7 @@ html {
 }
 
 .fms-diff-panel {
-  font-family: monospace;
+  font-family: ui-monospace, monospace;
   font-size: var(--aura-font-size-s);
   white-space: pre-wrap;
   padding: 1rem;
@@ -94,38 +385,41 @@ html {
 }
 
 .fms-decision-trace-step.match {
-  border-left-color: hsl(145, 60%, 45%);
+  border-left-color: var(--aura-green);
 }
 
 .fms-decision-trace-step.fail {
-  border-left-color: hsl(0, 70%, 50%);
+  border-left-color: var(--aura-red);
 }
 
-.fms-draft-bar {
-  padding: 0.75rem 1rem;
-  background: hsl(35, 90%, 95%);
-  border-top: 1px solid hsl(35, 70%, 70%);
+/* ── KPI cards ────────────────────────────────────────────────────── */
+
+.fms-kpi-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .fms-kpi-card {
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   min-width: 140px;
+  flex: 1;
 }
 
 .fms-kpi-value {
   font-size: var(--aura-font-size-xl);
   font-weight: 700;
+  line-height: 1.2;
 }
 
-.fms-api-key-warning {
-  padding: 1rem;
-  background: hsl(35, 90%, 92%);
-  border: 1px solid hsl(35, 70%, 50%);
-  border-radius: var(--vaadin-radius-m);
-  margin-bottom: 1rem;
+.fms-kpi-label {
+  font-size: var(--aura-font-size-s);
+  color: var(--vaadin-text-color-secondary);
+  margin-top: 0.25rem;
+}
+
+.fms-kpi-card-error .fms-kpi-value {
+  color: var(--aura-red);
 }
 
 .fms-publish-tracker {

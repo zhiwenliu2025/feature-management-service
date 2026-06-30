@@ -7,20 +7,22 @@ import com.fms.console.audit.service.AuditUiService;
 import com.fms.console.client.ApiClientExceptionHandler;
 import com.fms.console.client.FmsUiException;
 import com.fms.console.client.dto.AuditDtos.AuditEventDto;
-import com.fms.console.flag.ui.FlagDetailView;
 import com.fms.console.shared.ui.AccessControlService;
 import com.fms.console.shared.ui.ForbiddenView;
 import com.fms.console.shared.ui.MainLayout;
 import com.fms.console.shared.ui.LayoutUiService;
+import com.fms.console.shared.ui.components.EmptyState;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
+import com.fms.console.shared.ui.components.PageHeader;
 import tools.jackson.databind.ObjectMapper;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.details.Details;
 import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Pre;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
@@ -31,6 +33,7 @@ import com.vaadin.flow.router.Route;
 import com.fms.console.shared.ui.RouteLinks;
 
 import java.time.ZoneId;
+import java.util.List;
 
 @Route(value = "audit", layout = MainLayout.class)
 @PermitAll
@@ -43,6 +46,7 @@ public class AuditLogView extends VerticalLayout implements BeforeEnterObserver 
   private final LayoutUiService layoutUi;
 
   private final Grid<AuditEventDto> grid = new Grid<>(AuditEventDto.class, false);
+  private final VerticalLayout gridContainer = new VerticalLayout();
   private final DateTimePicker from = new DateTimePicker("From");
   private final DateTimePicker to = new DateTimePicker("To");
   private final ComboBox<String> action = new ComboBox<>("Action");
@@ -62,14 +66,16 @@ public class AuditLogView extends VerticalLayout implements BeforeEnterObserver 
     action.setItems("publish", "rollback", "kill_switch_on", "kill_switch_off", "flag_create", "flag_update");
     action.setClearButtonVisible(true);
 
-    H2 title = new H2("Audit log");
-    title.addClassName("fms-page-title");
-    Button search = new Button("Search", e -> load(null));
+    Button search = new Button("Search", VaadinIcon.SEARCH.create(), e -> load(null));
     HorizontalLayout filters = new HorizontalLayout(from, to, action, actor, resource, environment, search);
     filters.setWidthFull();
     configureGrid();
-    add(title, filters, grid);
-    setFlexGrow(1, grid);
+    gridContainer.setPadding(false);
+    gridContainer.setSpacing(true);
+    gridContainer.setSizeFull();
+    gridContainer.add(grid);
+    add(new PageHeader("Audit log"), filters, gridContainer);
+    setFlexGrow(1, gridContainer);
     load(null);
   }
 
@@ -82,6 +88,7 @@ public class AuditLogView extends VerticalLayout implements BeforeEnterObserver 
   }
 
   private void configureGrid() {
+    grid.addClassName("fms-grid-compact");
     grid.addColumn(AuditEventDto::createdAt).setHeader("Time").setFlexGrow(1);
     grid.addColumn(AuditEventDto::actor).setHeader("Actor");
     grid.addColumn(AuditEventDto::action).setHeader("Action");
@@ -90,7 +97,7 @@ public class AuditLogView extends VerticalLayout implements BeforeEnterObserver 
           if ("feature_flag".equals(event.resourceType())) {
             return RouteLinks.flag(event.resourceId(), event.resourceId());
           }
-          return new com.vaadin.flow.component.html.Span(event.resourceId());
+          return new Span(event.resourceId());
         }));
     grid.addColumn(AuditEventDto::environment).setHeader("Environment");
     grid.addComponentColumn(event -> {
@@ -99,10 +106,19 @@ public class AuditLogView extends VerticalLayout implements BeforeEnterObserver 
         Details details = new Details("Diff", new Pre(json));
         return details;
       } catch (Exception e) {
-        return new com.vaadin.flow.component.html.Span("—");
+        return new Span("—");
       }
     }).setHeader("Detail").setFlexGrow(2);
     grid.setSizeFull();
+  }
+
+  private void updateEmptyState(List<AuditEventDto> items) {
+    gridContainer.removeAll();
+    if (items.isEmpty()) {
+      gridContainer.add(new EmptyState("No audit events", "Adjust filters or try a broader date range."));
+    } else {
+      gridContainer.add(grid);
+    }
   }
 
   private void load(String cursor) {
@@ -118,6 +134,7 @@ public class AuditLogView extends VerticalLayout implements BeforeEnterObserver 
           50,
           cursor);
       grid.setItems(page.data());
+      updateEmptyState(page.data());
     } catch (FmsUiException ex) {
       ApiClientExceptionHandler.handle(ex);
     }

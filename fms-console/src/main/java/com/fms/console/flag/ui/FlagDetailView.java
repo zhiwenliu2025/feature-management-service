@@ -21,6 +21,7 @@ import com.fms.console.shared.ui.LayoutUiService;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
 import com.fms.console.shared.ui.components.FmsConfirmDialog;
 import com.fms.console.shared.ui.components.FmsNotification;
+import com.fms.console.shared.ui.components.PageHeader;
 import com.fms.console.shared.ui.components.PublishJobTracker;
 import com.fms.console.shared.ui.components.StatusBadge;
 import com.fms.console.shared.ui.components.UnsavedChangesGuard;
@@ -28,9 +29,9 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.tabs.Tab;
@@ -129,15 +130,18 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
         .filter(s -> env.equals(s.environment()))
         .anyMatch(s -> s.draftDirty());
 
-    HorizontalLayout header = new HorizontalLayout();
-    header.setWidthFull();
-    header.setAlignItems(Alignment.CENTER);
-    H2 key = new H2(flag.key());
-    key.addClassName("fms-page-title");
-    header.add(key, StatusBadge.forFlagStatus(flag.status(), draftDirty));
-    header.expand(key);
+    String subtitle = flag.name() != null && !flag.name().isBlank()
+        ? flag.name() + " · " + flag.type() + " · default: " + flag.defaultValue()
+        : flag.type() + " · default: " + flag.defaultValue();
 
-    Paragraph meta = new Paragraph(flag.appId() + " · " + flag.type() + " · default: " + flag.defaultValue());
+    PageHeader pageHeader = new PageHeader(
+        flag.key(),
+        subtitle,
+        new com.vaadin.flow.component.Component[] {StatusBadge.forFlagStatus(flag.status(), draftDirty)},
+        new com.vaadin.flow.component.Component[0]);
+
+    Paragraph meta = new Paragraph(flag.appId() + " · environment: " + env);
+    meta.addClassName("fms-placeholder");
 
     HorizontalLayout nav = new HorizontalLayout(
         RouteLinks.to("Rules", RuleEditorView.class, RouteLinks.flagParams(flagKey)),
@@ -165,7 +169,7 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
     tabs.setSelectedTab(overview);
     tabContent.add(buildOverview());
 
-    content.add(header, meta, nav, tabs, tabContent);
+    content.add(pageHeader, meta, nav, tabs, tabContent);
     updateDraftBar(draftDirty);
   }
 
@@ -191,7 +195,7 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
     keyField.setReadOnly(true);
     form.add(keyField, name, description, defaultValue, tags);
 
-    Button save = new Button("Save draft", e -> {
+    Button save = new Button("Save draft", VaadinIcon.CHECK.create(), e -> {
       try {
         Object def = flag.defaultValue() instanceof Boolean
             ? Boolean.parseBoolean(defaultValue.getValue())
@@ -210,7 +214,7 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
     });
     save.setEnabled(accessControl.canWriteFlags());
 
-    Button archive = new Button("Archive", e -> FmsConfirmDialog.confirmDestructive(
+    Button archive = new Button("Archive", VaadinIcon.ARCHIVE.create(), e -> FmsConfirmDialog.confirmDestructive(
         "Archive flag", "Archive " + flagKey + "?", () -> {
           try {
             flagUiService.archiveFlag(GlobalContextBar.resolveAppId(), flagKey);
@@ -245,7 +249,7 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
     comment.setRequiredIndicatorVisible(true);
     comment.setWidthFull();
 
-    Button publish = new Button("Publish", e -> FmsConfirmDialog.confirm(
+    Button publish = new Button("Publish", VaadinIcon.UPLOAD.create(), e -> FmsConfirmDialog.confirm(
         "Publish flag",
         "Publish " + flagKey + " to " + environment.getValue() + "?",
         () -> {
@@ -282,7 +286,7 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
     forced.setItems("false", "true");
     forced.setValue("false");
 
-    Button activate = new Button("Activate kill switch", e -> FmsConfirmDialog.confirmDestructive(
+    Button activate = new Button("Activate kill switch", VaadinIcon.BAN.create(), e -> FmsConfirmDialog.confirmDestructive(
         "Activate kill switch",
         "This will force the flag off for the selected scope. Continue?",
         () -> {
@@ -306,7 +310,7 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
         }));
     activate.getElement().setAttribute("aria-label", "Activate kill switch");
 
-    Button deactivate = new Button("Deactivate kill switch", e -> {
+    Button deactivate = new Button("Deactivate kill switch", VaadinIcon.CHECK.create(), e -> {
       try {
         killSwitchUiService.deactivate(flagKey, new KillSwitchRequestDto(
             GlobalContextBar.resolveAppId(),
@@ -336,7 +340,7 @@ public class FlagDetailView extends VerticalLayout implements BeforeEnterObserve
     draftBar.setVisible(true);
     draftBar.add(new Span("Draft modified, not yet published."));
     if (accessControl.canPublish()) {
-      Button publish = new Button("Publish…", e -> showPublishTab());
+      Button publish = new Button("Publish…", VaadinIcon.UPLOAD.create(), e -> showPublishTab());
       draftBar.add(publish);
     }
   }

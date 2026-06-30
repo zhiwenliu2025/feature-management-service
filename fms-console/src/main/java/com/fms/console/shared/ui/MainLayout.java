@@ -8,10 +8,15 @@ import com.fms.console.explain.ui.ExplainView;
 import com.fms.console.flag.ui.FlagListView;
 import com.fms.console.release.ui.ReleaseListView;
 import com.fms.console.shared.ui.components.UserMenu;
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.HasElement;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -19,15 +24,18 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.Layout;
+import com.vaadin.flow.router.RouterLayout;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 
 @Layout
 @AnonymousAllowed
-public class MainLayout extends AppLayout {
+public class MainLayout extends AppLayout implements RouterLayout {
 
   private final AccessControlService accessControl;
   private final Div breadcrumbSlot = new Div();
   private final Div bannerSlot = new Div();
+  private final Div contentWrapper = new Div();
+  private final VerticalLayout contentChrome = new VerticalLayout();
 
   public MainLayout(
       AccessControlService accessControl,
@@ -35,20 +43,35 @@ public class MainLayout extends AppLayout {
       LayoutUiService layoutUiService) {
     this.accessControl = accessControl;
     layoutUiService.register(this::setBreadcrumb, this::showKillSwitchBanner, this::clearBanner);
+
+    addClassName("fms-app-shell");
     setPrimarySection(Section.DRAWER);
-    addToDrawer(createHeader(), createNavigation());
+    addToDrawer(createDrawer());
     addToNavbar(createNavbar(contextBar));
 
-    breadcrumbSlot.addClassName("fms-breadcrumb-slot");
     bannerSlot.addClassName("fms-banner-slot");
-    VerticalLayout wrapper = new VerticalLayout(bannerSlot, breadcrumbSlot);
-    wrapper.setPadding(false);
-    wrapper.setSpacing(false);
-    wrapper.setWidthFull();
-    addToNavbar(wrapper);
+    breadcrumbSlot.addClassName("fms-breadcrumb-slot");
+    contentWrapper.addClassName("fms-content-wrapper");
+    contentWrapper.setSizeFull();
+
+    contentChrome.addClassName("fms-content-chrome");
+    contentChrome.setPadding(false);
+    contentChrome.setSpacing(false);
+    contentChrome.setSizeFull();
+    contentChrome.add(bannerSlot, breadcrumbSlot, contentWrapper);
+    contentChrome.expand(contentWrapper);
+    setContent(contentChrome);
   }
 
-  public void setBreadcrumb(com.vaadin.flow.component.Component breadcrumb) {
+  @Override
+  public void showRouterLayoutContent(HasElement content) {
+    contentWrapper.removeAll();
+    if (content != null) {
+      contentWrapper.getElement().appendChild(content.getElement());
+    }
+  }
+
+  public void setBreadcrumb(Component breadcrumb) {
     breadcrumbSlot.removeAll();
     if (breadcrumb != null) {
       breadcrumbSlot.add(breadcrumb);
@@ -67,16 +90,38 @@ public class MainLayout extends AppLayout {
     bannerSlot.removeAll();
   }
 
-  private HorizontalLayout createHeader() {
-    H1 title = new H1("FMS");
-    title.getStyle().set("font-size", "var(--aura-font-size-l)");
-    title.getStyle().set("margin", "0");
+  private VerticalLayout createDrawer() {
+    VerticalLayout drawer = new VerticalLayout();
+    drawer.addClassName("fms-drawer");
+    drawer.setPadding(false);
+    drawer.setSpacing(false);
+    drawer.setSizeFull();
 
-    HorizontalLayout header = new HorizontalLayout(new DrawerToggle(), title);
-    header.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
-    header.setWidthFull();
+    Div header = new Div();
     header.addClassName("fms-drawer-header");
-    return header;
+
+    Icon brandIcon = VaadinIcon.FLAG.create();
+    brandIcon.addClassName("fms-drawer-brand-icon");
+
+    H1 brandTitle = new H1("FMS");
+    brandTitle.addClassName("fms-drawer-brand-title");
+
+    Paragraph brandSubtitle = new Paragraph("Feature Management");
+    brandSubtitle.addClassName("fms-drawer-brand-subtitle");
+
+    Div brandText = new Div(brandTitle, brandSubtitle);
+    brandText.addClassName("fms-drawer-brand-text");
+
+    Div brand = new Div(brandIcon, brandText);
+    brand.addClassName("fms-drawer-brand");
+    header.add(brand);
+
+    SideNav nav = createNavigation();
+    nav.addClassName("fms-drawer-nav");
+
+    drawer.add(header, nav);
+    drawer.expand(nav);
+    return drawer;
   }
 
   private SideNav createNavigation() {
@@ -102,14 +147,29 @@ public class MainLayout extends AppLayout {
   }
 
   private HorizontalLayout createNavbar(GlobalContextBar contextBar) {
-    UserMenu userMenu = new UserMenu();
-
-    HorizontalLayout navbar = new HorizontalLayout(contextBar, userMenu);
+    HorizontalLayout navbar = new HorizontalLayout();
+    navbar.addClassName("fms-navbar");
     navbar.setWidthFull();
-    navbar.setJustifyContentMode(FlexComponent.JustifyContentMode.END);
-    navbar.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
+    navbar.setAlignItems(FlexComponent.Alignment.CENTER);
     navbar.setPadding(true);
     navbar.setSpacing(true);
+
+    DrawerToggle toggle = new DrawerToggle();
+
+    Span navbarBrand = new Span("FMS Admin");
+    navbarBrand.addClassName("fms-navbar-brand");
+    HorizontalLayout brandArea = new HorizontalLayout(toggle, navbarBrand);
+    brandArea.setAlignItems(FlexComponent.Alignment.CENTER);
+    brandArea.setSpacing(true);
+
+    Div contextArea = new Div(contextBar);
+    contextArea.addClassName("fms-navbar-context");
+
+    Div actionsArea = new Div(new UserMenu());
+    actionsArea.addClassName("fms-navbar-actions");
+
+    navbar.add(brandArea, contextArea, actionsArea);
+    navbar.expand(contextArea);
     return navbar;
   }
 }

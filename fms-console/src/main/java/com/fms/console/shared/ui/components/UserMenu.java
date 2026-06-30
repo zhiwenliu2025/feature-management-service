@@ -4,7 +4,6 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.contextmenu.MenuItem;
 import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.server.VaadinSession;
-import com.vaadin.flow.theme.lumo.Lumo;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,13 +19,19 @@ public class UserMenu extends MenuBar {
     MenuItem userItem = addItem(displayName);
     var subMenu = userItem.getSubMenu();
 
-    resolveRoles().forEach(role -> subMenu.addItem(role));
+    String roles = String.join(" · ", resolveRoles());
+    if (roles.isBlank()) {
+      roles = "local";
+    }
+    subMenu.addItem("Roles: " + roles).setEnabled(false);
 
-    subMenu.addItem("Color: System", e -> setColorScheme("system"));
-    subMenu.addItem("Color: Light", e -> setColorScheme("light"));
-    subMenu.addItem("Color: Dark", e -> setColorScheme("dark"));
+    subMenu.addItem("Color: System", e -> setContentColorScheme("system"));
+    subMenu.addItem("Color: Light", e -> setContentColorScheme("light"));
+    subMenu.addItem("Color: Dark", e -> setContentColorScheme("dark"));
 
     subMenu.addItem("Sign out", e -> UI.getCurrent().getPage().setLocation("/logout"));
+
+    applyStoredColorScheme();
   }
 
   private String resolveDisplayName() {
@@ -51,7 +56,7 @@ public class UserMenu extends MenuBar {
   private java.util.List<String> resolveRoles() {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null) {
-      return java.util.List.of("local");
+      return java.util.List.of();
     }
     return auth.getAuthorities().stream()
         .map(GrantedAuthority::getAuthority)
@@ -61,17 +66,26 @@ public class UserMenu extends MenuBar {
         .toList();
   }
 
-  private void setColorScheme(String scheme) {
+  private void applyStoredColorScheme() {
+    Object stored = VaadinSession.getCurrent().getAttribute(COLOR_SCHEME_KEY);
+    if (stored != null) {
+      setContentColorScheme(stored.toString());
+    }
+  }
+
+  private void setContentColorScheme(String scheme) {
     VaadinSession.getCurrent().setAttribute(COLOR_SCHEME_KEY, scheme);
     UI ui = UI.getCurrent();
     if (ui == null) {
       return;
     }
-    switch (scheme) {
-      case "light" -> ui.getElement().setAttribute("theme", Lumo.LIGHT);
-      case "dark" -> ui.getElement().setAttribute("theme", Lumo.DARK);
-      default -> ui.getElement().removeAttribute("theme");
-    }
+    String contentScheme = switch (scheme) {
+      case "light" -> "light";
+      case "dark" -> "dark";
+      default -> "light dark";
+    };
+    ui.getElement().executeJs(
+        "document.documentElement.style.setProperty('--aura-content-color-scheme', $0)", contentScheme);
     FmsNotification.info("Color scheme: " + scheme);
   }
 }

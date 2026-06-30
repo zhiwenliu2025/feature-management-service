@@ -17,10 +17,12 @@ import com.fms.console.shared.ui.MainLayout;
 import com.fms.console.shared.ui.LayoutUiService;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
 import com.fms.console.shared.ui.components.FmsNotification;
+import com.fms.console.shared.ui.components.PageHeader;
+import com.fms.console.shared.ui.components.SectionCard;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.BeforeEnterEvent;
@@ -47,6 +49,7 @@ public class ExplainView extends VerticalLayout implements BeforeEnterObserver {
     setPadding(true);
     setSpacing(true);
     setSizeFull();
+    add(new PageHeader("Explain debugger", "Why does a user see or not see a feature?"));
     add(buildForm(), results);
     setFlexGrow(1, results);
   }
@@ -61,8 +64,6 @@ public class ExplainView extends VerticalLayout implements BeforeEnterObserver {
 
   private FormLayout buildForm() {
     FormLayout form = new FormLayout();
-    H2 title = new H2("Explain debugger");
-    title.addClassName("fms-page-title");
 
     TextField flagKey = new TextField("Flag key");
     flagKey.setRequiredIndicatorVisible(true);
@@ -78,7 +79,7 @@ public class ExplainView extends VerticalLayout implements BeforeEnterObserver {
     showPii.setEnabled(accessControl.canExplainPii());
     showPii.addValueChangeListener(e -> showFullUserId = Boolean.TRUE.equals(e.getValue()));
 
-    Button run = new Button("Run explain", e -> {
+    Button run = new Button("Run explain", VaadinIcon.SEARCH.create(), e -> {
       try {
         EvaluateContextDto ctx = new EvaluateContextDto(
             maskUserId(userId.getValue()),
@@ -112,7 +113,7 @@ public class ExplainView extends VerticalLayout implements BeforeEnterObserver {
     });
     run.getElement().setAttribute("aria-label", "Run explain query");
 
-    form.add(title, flagKey, environment, userId, region, appVersion, replay, configVersion, showPii, run);
+    form.add(flagKey, environment, userId, region, appVersion, replay, configVersion, showPii, run);
     return form;
   }
 
@@ -131,13 +132,17 @@ public class ExplainView extends VerticalLayout implements BeforeEnterObserver {
 
   private void showResult(ExplainResponseDto response) {
     results.removeAll();
-    results.add(new DecisionTracePanel(response));
-    Button copy = new Button("Copy summary", e -> {
+    VerticalLayout resultContent = new VerticalLayout();
+    resultContent.setPadding(false);
+    resultContent.setSpacing(true);
+    resultContent.add(new DecisionTracePanel(response));
+    Button copy = new Button("Copy summary", VaadinIcon.COPY.create(), e -> {
       String summary = "enabled=" + response.enabled() + " value=" + response.value()
           + " reason=" + response.reasonCode();
       getUI().ifPresent(ui -> ui.getPage().executeJs("navigator.clipboard.writeText($0)", summary));
       FmsNotification.success("Summary copied.");
     });
-    results.add(copy);
+    resultContent.add(copy);
+    results.add(new SectionCard("Result", resultContent));
   }
 }

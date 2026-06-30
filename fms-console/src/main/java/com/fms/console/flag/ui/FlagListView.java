@@ -18,6 +18,7 @@ import com.fms.console.shared.ui.components.EmptyState;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
 import com.fms.console.shared.ui.components.FmsConfirmDialog;
 import com.fms.console.shared.ui.components.FmsNotification;
+import com.fms.console.shared.ui.components.PageHeader;
 import com.fms.console.shared.ui.components.PromoteDialog;
 import com.fms.console.shared.ui.components.StatusBadge;
 import com.vaadin.flow.component.button.Button;
@@ -25,8 +26,7 @@ import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.grid.GridMultiSelectionModel;
-import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
@@ -51,10 +51,10 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
   private final LayoutUiService layoutUi;
 
   private final Grid<FlagSummaryDto> grid = new Grid<>(FlagSummaryDto.class, false);
+  private final VerticalLayout gridContainer = new VerticalLayout();
   private final TextField search = new TextField();
   private final ComboBox<String> statusFilter = new ComboBox<>("Status");
   private String cursor;
-  private boolean hasMore;
 
   public FlagListView(
       FlagUiService flagUiService,
@@ -70,19 +70,16 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
     setSpacing(true);
     setSizeFull();
 
-    H2 title = new H2("Feature Flags");
-    title.addClassName("fms-page-title");
-
     search.setPlaceholder("Search flags…");
     search.setWidth("280px");
     statusFilter.setItems("draft", "published", "archived");
     statusFilter.setClearButtonVisible(true);
 
-    Button refresh = new Button("Search", e -> load(null));
-    Button create = new Button("New flag", e -> openCreateDialog());
+    Button refresh = new Button("Search", VaadinIcon.SEARCH.create(), e -> load(null));
+    Button create = new Button("New flag", VaadinIcon.PLUS.create(), e -> openCreateDialog());
     create.setEnabled(accessControl.canWriteFlags());
 
-    Button promote = new Button("Promote selected", e -> openPromote());
+    Button promote = new Button("Promote selected", VaadinIcon.UPLOAD.create(), e -> openPromote());
     promote.setEnabled(accessControl.canPublish());
 
     HorizontalLayout toolbar = new HorizontalLayout(search, statusFilter, refresh, create, promote);
@@ -90,11 +87,16 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
     toolbar.setWidthFull();
 
     configureGrid();
-    add(title, toolbar, grid);
+    gridContainer.setPadding(false);
+    gridContainer.setSpacing(true);
+    gridContainer.setSizeFull();
+    gridContainer.add(grid);
+    setFlexGrow(1, gridContainer);
 
     Button loadMore = new Button("Load more", e -> load(cursor));
     loadMore.setId("load-more");
-    add(loadMore);
+
+    add(new PageHeader("Feature Flags"), toolbar, gridContainer, loadMore);
 
     load(null);
   }
@@ -112,7 +114,11 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
     grid.addClassName("fms-grid-compact");
     grid.setSelectionMode(Grid.SelectionMode.MULTI);
     grid.addColumn(FlagSummaryDto::key).setHeader("Key").setFlexGrow(1)
-        .setRenderer(new ComponentRenderer<>(flag -> RouteLinks.flag(flag.key(), flag.key())));
+        .setRenderer(new ComponentRenderer<>(flag -> {
+          var link = RouteLinks.flag(flag.key(), flag.key());
+          link.addClassName("fms-monospace");
+          return link;
+        }));
     grid.addColumn(FlagSummaryDto::name).setHeader("Name").setFlexGrow(2);
     grid.addColumn(FlagSummaryDto::type).setHeader("Type");
     grid.addColumn(flag -> flag.status()).setHeader("Status")
@@ -124,7 +130,7 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
         .setHeader("Updated");
 
     grid.addComponentColumn(flag -> {
-      Button menu = new Button("⋮");
+      Button menu = new Button(VaadinIcon.ELLIPSIS_DOTS_V.create());
       menu.getElement().setAttribute("aria-label", "Actions for " + flag.key());
       ContextMenu cm = new ContextMenu(menu);
       cm.setOpenOnClick(true);
@@ -148,6 +154,31 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
     grid.setSizeFull();
   }
 
+  private void updateEmptyState(List<FlagSummaryDto> items) {
+    gridContainer.removeAll();
+    if (items.isEmpty()) {
+      String query = search.getValue();
+      if (query != null && !query.isBlank()) {
+        gridContainer.add(new EmptyState(
+            "No flags found",
+            "No flags match your search. Try a different term or clear filters.",
+            "Clear search",
+            () -> {
+              search.clear();
+              load(null);
+            }));
+      } else {
+        gridContainer.add(new EmptyState(
+            "No feature flags",
+            "Create your first flag to get started.",
+            accessControl.canWriteFlags() ? "New flag" : null,
+            accessControl.canWriteFlags() ? this::openCreateDialog : null));
+      }
+    } else {
+      gridContainer.add(grid);
+    }
+  }
+
   private void load(String nextCursor) {
     try {
       PageResponse<FlagSummaryDto> page = flagUiService.listFlags(
@@ -157,15 +188,16 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
           search.getValue(),
           20,
           nextCursor);
+      List<FlagSummaryDto> items;
       if (nextCursor == null) {
-        grid.setItems(page.data());
+        items = page.data();
       } else {
-        List<FlagSummaryDto> items = new ArrayList<>(grid.getListDataView().getItems().toList());
+        items = new ArrayList<>(grid.getListDataView().getItems().toList());
         items.addAll(page.data());
-        grid.setItems(items);
       }
+      grid.setItems(items);
+      updateEmptyState(items);
       cursor = page.pagination().nextCursor();
-      hasMore = page.pagination().hasMore();
     } catch (FmsUiException ex) {
       ApiClientExceptionHandler.handle(ex);
     }

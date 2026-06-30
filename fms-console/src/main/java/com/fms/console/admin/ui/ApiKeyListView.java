@@ -12,15 +12,17 @@ import com.fms.console.shared.ui.AccessControlService;
 import com.fms.console.shared.ui.ForbiddenView;
 import com.fms.console.shared.ui.MainLayout;
 import com.fms.console.shared.ui.LayoutUiService;
+import com.fms.console.shared.ui.components.EmptyState;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
 import com.fms.console.shared.ui.components.FmsConfirmDialog;
 import com.fms.console.shared.ui.components.FmsNotification;
+import com.fms.console.shared.ui.components.PageHeader;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.BeforeEnterEvent;
@@ -66,19 +68,22 @@ public class ApiKeyListView extends VerticalLayout implements BeforeEnterObserve
 
   private void render() {
     removeAll();
-    H2 title = new H2("API keys — " + appId);
-    title.addClassName("fms-page-title");
-    Button create = new Button("Create API key", e -> openCreate());
-    add(title, create);
+    Button create = new Button("Create API key", VaadinIcon.KEY.create(), e -> openCreate());
+    add(new PageHeader("API keys — " + appId, create));
+
+    VerticalLayout gridContainer = new VerticalLayout();
+    gridContainer.setPadding(false);
+    gridContainer.setSizeFull();
 
     Grid<ApiKeyDto> grid = new Grid<>(ApiKeyDto.class, false);
+    grid.addClassName("fms-grid-compact");
     grid.addColumn(ApiKeyDto::keyPrefix).setHeader("Key prefix");
     grid.addColumn(ApiKeyDto::name).setHeader("Name");
     grid.addColumn(k -> k.scopes() == null ? "" : String.join(", ", k.scopes())).setHeader("Scopes");
     grid.addColumn(ApiKeyDto::createdAt).setHeader("Created");
     grid.addColumn(ApiKeyDto::revokedAt).setHeader("Revoked");
     grid.addComponentColumn(key -> {
-      Button revoke = new Button("Revoke", e -> FmsConfirmDialog.confirmDestructive(
+      Button revoke = new Button("Revoke", VaadinIcon.BAN.create(), e -> FmsConfirmDialog.confirmDestructive(
           "Revoke API key",
           "Revoke key " + key.keyPrefix() + "? This cannot be undone.",
           () -> revoke(key.id())));
@@ -86,13 +91,23 @@ public class ApiKeyListView extends VerticalLayout implements BeforeEnterObserve
       return revoke;
     });
     try {
-      grid.setItems(applicationUiService.listApiKeys(appId));
+      List<ApiKeyDto> keys = applicationUiService.listApiKeys(appId);
+      if (keys.isEmpty()) {
+        gridContainer.add(new EmptyState(
+            "No API keys",
+            "Create an API key for programmatic access to this application.",
+            "Create API key",
+            this::openCreate));
+      } else {
+        grid.setItems(keys);
+        grid.setSizeFull();
+        gridContainer.add(grid);
+      }
     } catch (FmsUiException ex) {
       ApiClientExceptionHandler.handle(ex);
     }
-    grid.setSizeFull();
-    add(grid);
-    setFlexGrow(1, grid);
+    add(gridContainer);
+    setFlexGrow(1, gridContainer);
   }
 
   private void openCreate() {
@@ -121,7 +136,8 @@ public class ApiKeyListView extends VerticalLayout implements BeforeEnterObserve
     warning.setText("Copy this key now. It will not be shown again.");
     warning.addClassName("fms-api-key-warning");
     Paragraph key = new Paragraph(created.apiKey());
-    Button copy = new Button("Copy", e -> getUI().ifPresent(ui ->
+    key.addClassName("fms-monospace");
+    Button copy = new Button("Copy", VaadinIcon.COPY.create(), e -> getUI().ifPresent(ui ->
         ui.getPage().executeJs("navigator.clipboard.writeText($0)", created.apiKey())));
     dialog.add(warning, key, copy);
     dialog.open();

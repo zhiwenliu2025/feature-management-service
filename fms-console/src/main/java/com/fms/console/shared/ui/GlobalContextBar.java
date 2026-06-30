@@ -8,7 +8,8 @@ import com.fms.console.client.dto.ApplicationDtos.ApplicationDto;
 import com.fms.console.client.dto.EnvironmentDtos.EnvironmentDto;
 import com.fms.console.shared.ui.components.UnsavedChangesGuard;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.spring.annotation.SpringComponent;
@@ -31,8 +32,13 @@ public class GlobalContextBar extends HorizontalLayout {
     setAlignItems(Alignment.CENTER);
     setSpacing(true);
 
-    appSelector.setWidth("220px");
-    environmentSelector.setWidth("140px");
+    Icon contextIcon = VaadinIcon.CLUSTER.create();
+    contextIcon.setSize("var(--aura-icon-size-s)");
+
+    appSelector.setWidth("12rem");
+    environmentSelector.setWidth("9rem");
+    appSelector.getElement().setAttribute("theme", "small");
+    environmentSelector.getElement().setAttribute("theme", "small");
 
     try {
       List<String> apps = applicationUiService.list(50, null).data().stream()
@@ -98,7 +104,7 @@ public class GlobalContextBar extends HorizontalLayout {
       });
     });
 
-    add(new Span("App:"), appSelector, new Span("Env:"), environmentSelector);
+    add(contextIcon, appSelector, environmentSelector);
   }
 
   public static String resolveAppId() {

@@ -12,12 +12,15 @@ import com.fms.console.shared.ui.AccessControlService;
 import com.fms.console.shared.ui.ForbiddenView;
 import com.fms.console.shared.ui.MainLayout;
 import com.fms.console.shared.ui.LayoutUiService;
+import com.fms.console.shared.ui.components.EmptyState;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
 import com.fms.console.shared.ui.components.FmsNotification;
+import com.fms.console.shared.ui.components.PageHeader;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
@@ -26,6 +29,7 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import com.fms.console.shared.ui.RouteLinks;
 
+import java.util.List;
 import java.util.Map;
 
 @Route(value = "releases", layout = MainLayout.class)
@@ -36,6 +40,7 @@ public class ReleaseListView extends VerticalLayout implements BeforeEnterObserv
   private final AccessControlService accessControl;
   private final LayoutUiService layoutUi;
   private final Grid<ReleaseSummaryDto> grid = new Grid<>(ReleaseSummaryDto.class, false);
+  private final VerticalLayout gridContainer = new VerticalLayout();
 
   public ReleaseListView(ReleaseUiService releaseUiService, AccessControlService accessControl, LayoutUiService layoutUi) {
     this.releaseUiService = releaseUiService;
@@ -45,13 +50,14 @@ public class ReleaseListView extends VerticalLayout implements BeforeEnterObserv
     setSpacing(true);
     setSizeFull();
 
-    H2 title = new H2("Releases");
-    title.addClassName("fms-page-title");
-    Button create = new Button("Create release", e -> openCreate());
+    Button create = new Button("Create release", VaadinIcon.PLUS.create(), e -> openCreate());
     create.setEnabled(accessControl.canWriteFlags());
     configureGrid();
-    add(title, create, grid);
-    setFlexGrow(1, grid);
+    gridContainer.setPadding(false);
+    gridContainer.setSizeFull();
+    gridContainer.add(grid);
+    add(new PageHeader("Releases", create), gridContainer);
+    setFlexGrow(1, gridContainer);
     load();
   }
 
@@ -64,6 +70,7 @@ public class ReleaseListView extends VerticalLayout implements BeforeEnterObserv
   }
 
   private void configureGrid() {
+    grid.addClassName("fms-grid-compact");
     grid.addColumn(ReleaseSummaryDto::releaseId).setHeader("Release ID")
         .setRenderer(new ComponentRenderer<>(r -> RouteLinks.release(r.releaseId(), r.releaseId())));
     grid.addColumn(ReleaseSummaryDto::version).setHeader("Version");
@@ -73,10 +80,24 @@ public class ReleaseListView extends VerticalLayout implements BeforeEnterObserv
     grid.setSizeFull();
   }
 
+  private void updateEmptyState(List<ReleaseSummaryDto> items) {
+    gridContainer.removeAll();
+    if (items.isEmpty()) {
+      gridContainer.add(new EmptyState(
+          "No releases",
+          "Create a release to group flag publishes.",
+          accessControl.canWriteFlags() ? "Create release" : null,
+          accessControl.canWriteFlags() ? this::openCreate : null));
+    } else {
+      gridContainer.add(grid);
+    }
+  }
+
   private void load() {
     try {
       PageResponse<ReleaseSummaryDto> page = releaseUiService.list(50);
       grid.setItems(page.data());
+      updateEmptyState(page.data());
     } catch (FmsUiException ex) {
       ApiClientExceptionHandler.handle(ex);
     }

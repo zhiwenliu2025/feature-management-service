@@ -9,15 +9,16 @@ public final class FmsNotification {
 
   public static void success(String message) {
     Notification.show(message, 3000, Notification.Position.BOTTOM_START)
-        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        .addThemeVariants(NotificationVariant.SUCCESS);
   }
 
   public static void error(String message) {
     Notification.show(message, 0, Notification.Position.TOP_CENTER)
-        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+        .addThemeVariants(NotificationVariant.ERROR);
   }
 
   public static void info(String message) {
-    Notification.show(message, 4000, Notification.Position.BOTTOM_START);
+    Notification.show(message, 4000, Notification.Position.BOTTOM_START)
+        .addThemeVariants(NotificationVariant.INFO);
   }
 }

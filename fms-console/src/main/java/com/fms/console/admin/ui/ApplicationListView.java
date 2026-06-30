@@ -13,12 +13,14 @@ import com.fms.console.shared.ui.AccessControlService;
 import com.fms.console.shared.ui.ForbiddenView;
 import com.fms.console.shared.ui.MainLayout;
 import com.fms.console.shared.ui.LayoutUiService;
+import com.fms.console.shared.ui.components.EmptyState;
 import com.fms.console.shared.ui.components.FmsBreadcrumb;
 import com.fms.console.shared.ui.components.FmsNotification;
+import com.fms.console.shared.ui.components.PageHeader;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
@@ -26,6 +28,8 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import com.fms.console.shared.ui.RouteLinks;
+
+import java.util.List;
 
 @Route(value = "admin/applications", layout = MainLayout.class)
 @PermitAll
@@ -35,6 +39,7 @@ public class ApplicationListView extends VerticalLayout implements BeforeEnterOb
   private final AccessControlService accessControl;
   private final LayoutUiService layoutUi;
   private final Grid<ApplicationDto> grid = new Grid<>(ApplicationDto.class, false);
+  private final VerticalLayout gridContainer = new VerticalLayout();
 
   public ApplicationListView(
       ApplicationUiService applicationUiService,
@@ -47,12 +52,13 @@ public class ApplicationListView extends VerticalLayout implements BeforeEnterOb
     setSpacing(true);
     setSizeFull();
 
-    H2 title = new H2("Applications");
-    title.addClassName("fms-page-title");
-    Button create = new Button("Create application", e -> openCreate());
+    Button create = new Button("Create application", VaadinIcon.PLUS.create(), e -> openCreate());
     configureGrid();
-    add(title, create, grid);
-    setFlexGrow(1, grid);
+    gridContainer.setPadding(false);
+    gridContainer.setSizeFull();
+    gridContainer.add(grid);
+    add(new PageHeader("Applications", create), gridContainer);
+    setFlexGrow(1, gridContainer);
     load();
   }
 
@@ -65,20 +71,39 @@ public class ApplicationListView extends VerticalLayout implements BeforeEnterOb
   }
 
   private void configureGrid() {
+    grid.addClassName("fms-grid-compact");
     grid.addColumn(ApplicationDto::slug).setHeader("Slug")
-        .setRenderer(new ComponentRenderer<>(a -> RouteLinks.apiKeys(a.slug(), a.slug())));
+        .setRenderer(new ComponentRenderer<>(a -> {
+          var link = RouteLinks.apiKeys(a.slug(), a.slug());
+          link.addClassName("fms-monospace");
+          return link;
+        }));
     grid.addColumn(ApplicationDto::name).setHeader("Name");
     grid.addColumn(ApplicationDto::ownerTeam).setHeader("Owner team");
     grid.addColumn(ApplicationDto::status).setHeader("Status");
     grid.addColumn(ApplicationDto::createdAt).setHeader("Created");
-    grid.addComponentColumn(app -> new Button("Edit", e -> openEdit(app)));
+    grid.addComponentColumn(app -> new Button("Edit", VaadinIcon.EDIT.create(), e -> openEdit(app)));
     grid.setSizeFull();
+  }
+
+  private void updateEmptyState(List<ApplicationDto> items) {
+    gridContainer.removeAll();
+    if (items.isEmpty()) {
+      gridContainer.add(new EmptyState(
+          "No applications",
+          "Onboard an application to manage feature flags.",
+          "Create application",
+          this::openCreate));
+    } else {
+      gridContainer.add(grid);
+    }
   }
 
   private void load() {
     try {
       PageResponse<ApplicationDto> page = applicationUiService.list(50, null);
       grid.setItems(page.data());
+      updateEmptyState(page.data());
     } catch (FmsUiException ex) {
       ApiClientExceptionHandler.handle(ex);
     }
