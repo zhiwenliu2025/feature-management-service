@@ -152,7 +152,7 @@ Production settings are in `fms-server/src/main/resources/application.yml`. Prof
 java -jar fms-server/build/libs/fms-server-0.1.0-SNAPSHOT.jar
 ```
 
-Integration tests spin up PostgreSQL and Redis via Testcontainers automatically.
+Integration tests spin up PostgreSQL and Redis via Testcontainers automatically. See [Testing Guide](docs/Feature_Management_Service_Testing.md) for details.
 
 ## Observability
 
@@ -188,6 +188,7 @@ Details: [Technology Stack](docs/Feature_Management_Service_Technology_Stack.md)
 | [Redis Cache Design](docs/Feature_Management_Service_Redis_Cache_Design.md) | Snapshot keys and invalidation |
 | [UI Design](docs/Feature_Management_Service_UI_Design.md) | Admin console (Vaadin Aura) |
 | [Technology Stack](docs/Feature_Management_Service_Technology_Stack.md) | Versions and dependencies |
+| [Testing Guide](docs/Feature_Management_Service_Testing.md) | Test structure, infrastructure, and how to run tests |
 
 ## License
 
