@@ -15,6 +15,7 @@ fms:
       enabled: false
     api-key:
       enforced: false
+    local-api-auto-auth: true
   console:
     api-base-url: ""
     local-api-key: ""

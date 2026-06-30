@@ -9,6 +9,7 @@ public class FmsSecurityProperties {
 
     private final ApiKey apiKey = new ApiKey();
     private final Idempotency idempotency = new Idempotency();
+    private boolean localApiAutoAuth = false;
 
     public ApiKey apiKey() {
         return apiKey;
@@ -16,6 +17,14 @@ public class FmsSecurityProperties {
 
     public Idempotency idempotency() {
         return idempotency;
+    }
+
+    public boolean localApiAutoAuth() {
+        return localApiAutoAuth;
+    }
+
+    public void setLocalApiAutoAuth(boolean localApiAutoAuth) {
+        this.localApiAutoAuth = localApiAutoAuth;
     }
 
     public static class ApiKey {

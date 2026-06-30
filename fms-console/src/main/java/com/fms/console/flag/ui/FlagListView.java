@@ -207,13 +207,27 @@ public class FlagListView extends VerticalLayout implements BeforeEnterObserver 
     Dialog dialog = new Dialog();
     dialog.setHeaderTitle("Create feature flag");
     TextField key = new TextField("Key");
+    key.setRequired(true);
+    key.setPattern("^[a-z][a-z0-9_]{0,127}$");
+    key.setAllowedCharPattern("[a-z0-9_]");
+    key.setHelperText("Lowercase letters, numbers, and underscores; must start with a letter.");
+    key.setErrorMessage("Use lowercase letters, numbers, and underscores only (e.g. my_feature_flag).");
     TextField name = new TextField("Name");
+    name.setRequired(true);
     ComboBox<String> type = new ComboBox<>("Type");
     type.setItems("boolean", "string", "number", "json");
     type.setValue("boolean");
     TextField defaultValue = new TextField("Default value");
     defaultValue.setValue("false");
     Button save = new Button("Create", e -> {
+      if (key.isEmpty() || name.isEmpty()) {
+        FmsNotification.error("Key and name are required.");
+        return;
+      }
+      if (key.isInvalid()) {
+        FmsNotification.error(key.getErrorMessage());
+        return;
+      }
       try {
         Object def = "boolean".equals(type.getValue()) ? Boolean.parseBoolean(defaultValue.getValue()) : defaultValue.getValue();
         flagUiService.createFlag(new CreateFlagDto(

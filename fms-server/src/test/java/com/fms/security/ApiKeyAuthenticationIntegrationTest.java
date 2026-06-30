@@ -15,7 +15,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@TestPropertySource(properties = "fms.security.api-key.enforced=true")
+@TestPropertySource(properties = {
+    "fms.security.api-key.enforced=true",
+    "fms.security.local-api-auto-auth=false"
+})
 class ApiKeyAuthenticationIntegrationTest extends SyncIntegrationTestSupport {
 
     @Test

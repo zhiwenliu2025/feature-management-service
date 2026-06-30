@@ -1,6 +1,8 @@
 package com.fms.config;
 
+import com.fms.config.FmsSecurityProperties;
 import com.fms.security.ApiKeyAuthenticationFilter;
+import com.fms.security.LocalApiAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,10 +19,17 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
   @Bean
+  @Profile("local")
+  LocalApiAuthenticationFilter localApiAuthenticationFilter(FmsSecurityProperties securityProperties) {
+    return new LocalApiAuthenticationFilter(securityProperties);
+  }
+
+  @Bean
   @Order(1)
   @Profile("local")
   SecurityFilterChain localSecurityFilterChain(
       HttpSecurity http,
+      LocalApiAuthenticationFilter localApiAuthenticationFilter,
       ApiKeyAuthenticationFilter apiKeyAuthenticationFilter) throws Exception {
     return http
         .securityMatcher("/api/**")
@@ -28,6 +37,7 @@ public class SecurityConfig {
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
         .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(localApiAuthenticationFilter, ApiKeyAuthenticationFilter.class)
         .build();
   }
 

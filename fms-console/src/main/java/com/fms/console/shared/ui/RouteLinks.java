@@ -8,10 +8,12 @@ public final class RouteLinks {
 
   private RouteLinks() {}
 
+  /**
+   * Builds a link to a parameterized route. The single-arg {@link RouterLink} constructor
+   * must not be used for routes that require parameters — Vaadin throws before parameters apply.
+   */
   public static RouterLink to(String text, Class<? extends Component> target, RouteParameters params) {
-    RouterLink link = new RouterLink(text, target);
-    link.setRoute(target, params);
-    return link;
+    return new RouterLink(text, target, params);
   }
 
   public static RouterLink flag(String text, String flagKey) {
