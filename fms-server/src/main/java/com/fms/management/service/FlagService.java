@@ -285,12 +285,18 @@ public class FlagService {
     }
 
     private FlagSummaryResponse toSummary(FeatureFlagEntity flag) {
+        List<String> tags = featureFlagRepository.findTagNamesByFlagId(flag.getId());
+        boolean draftDirty = flagEnvironmentStateRepository.findByFlag_Id(flag.getId()).stream()
+                .anyMatch(FlagEnvironmentStateEntity::isDraftDirty);
         return new FlagSummaryResponse(
                 flag.getApplication().getSlug(),
                 flag.getKey(),
                 flag.getName(),
                 flag.getType().externalName(),
                 flag.getStatus(),
+                flag.getDefaultValue(),
+                tags,
+                draftDirty,
                 flag.getUpdatedAt());
     }
 

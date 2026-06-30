@@ -1,22 +1,124 @@
 package com.fms.console.flag.ui;
 
+import com.fms.common.api.PageResponse;
+import com.fms.console.client.ApiClientExceptionHandler;
+import com.fms.console.client.FmsUiException;
+import com.fms.console.client.dto.FlagDtos.FlagDetailDto;
+import com.fms.console.client.dto.FlagDtos.FlagVersionDetailDto;
+import com.fms.console.client.dto.FlagDtos.FlagVersionSummaryDto;
+import com.fms.console.client.dto.FlagDtos.RollbackFlagDto;
+import com.fms.console.flag.service.FlagUiService;
+import com.fms.console.shared.ui.AccessControlService;
+import com.fms.console.shared.ui.ForbiddenView;
+import com.fms.console.shared.ui.GlobalContextBar;
 import com.fms.console.shared.ui.MainLayout;
-import com.fms.console.shared.ui.PlaceholderView;
-import com.vaadin.flow.router.BeforeEvent;
-import com.vaadin.flow.router.HasUrlParameter;
+import com.fms.console.shared.ui.LayoutUiService;
+import com.fms.console.shared.ui.components.DiffPanel;
+import com.fms.console.shared.ui.components.FmsBreadcrumb;
+import com.fms.console.shared.ui.components.FmsConfirmDialog;
+import com.fms.console.shared.ui.components.FmsNotification;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.server.auth.AnonymousAllowed;
+import jakarta.annotation.security.PermitAll;
 
 @Route(value = "flags/:flagKey/versions", layout = MainLayout.class)
-@AnonymousAllowed
-public class VersionHistoryView extends PlaceholderView implements HasUrlParameter<String> {
+@PermitAll
+public class VersionHistoryView extends VerticalLayout implements BeforeEnterObserver {
 
-  public VersionHistoryView() {
-    super("Version History", "Published versions with diff comparison.");
+  private final FlagUiService flagUiService;
+  private final AccessControlService accessControl;
+  private final LayoutUiService layoutUi;
+
+  private String flagKey;
+  private final Grid<FlagVersionSummaryDto> grid = new Grid<>(FlagVersionSummaryDto.class, false);
+  private final VerticalLayout diffArea = new VerticalLayout();
+
+  public VersionHistoryView(FlagUiService flagUiService, AccessControlService accessControl, LayoutUiService layoutUi) {
+    this.flagUiService = flagUiService;
+    this.accessControl = accessControl;
+    this.layoutUi = layoutUi;
+    setPadding(true);
+    setSpacing(true);
+    setSizeFull();
+
+    H2 title = new H2("Version history");
+    title.addClassName("fms-page-title");
+    configureGrid();
+    add(title, grid, diffArea);
+    setFlexGrow(1, grid);
   }
 
   @Override
-  public void setParameter(BeforeEvent event, String flagKey) {
-    getElement().setAttribute("data-flag-key", flagKey);
+  public void beforeEnter(BeforeEnterEvent event) {
+    if (!accessControl.canReadFlags()) {
+      event.rerouteTo(ForbiddenView.class);
+      return;
+    }
+    flagKey = event.getRouteParameters().get("flagKey").orElse("");
+    layoutUi.setBreadcrumb(new FmsBreadcrumb()
+        .segment("Flags", FlagListView.class)
+        .current(flagKey + " / versions"));
+    load();
+  }
+
+  private void configureGrid() {
+    grid.addColumn(FlagVersionSummaryDto::flagVersion).setHeader("Version");
+    grid.addColumn(FlagVersionSummaryDto::configVersion).setHeader("Config version");
+    grid.addColumn(FlagVersionSummaryDto::publishedAt).setHeader("Published at");
+    grid.addColumn(FlagVersionSummaryDto::publishedBy).setHeader("Published by");
+    grid.addColumn(FlagVersionSummaryDto::comment).setHeader("Comment");
+    grid.addComponentColumn(v -> {
+      Button view = new Button("Diff", e -> showDiff(v.flagVersion()));
+      Button rollback = new Button("Rollback", e -> rollback(v.flagVersion()));
+      rollback.setEnabled(accessControl.canPublish());
+      return new com.vaadin.flow.component.orderedlayout.HorizontalLayout(view, rollback);
+    }).setHeader("Actions");
+    grid.setSizeFull();
+  }
+
+  private void load() {
+    try {
+      PageResponse<FlagVersionSummaryDto> page = flagUiService.listVersions(
+          GlobalContextBar.resolveAppId(), flagKey, GlobalContextBar.resolveEnvironment(), 50);
+      grid.setItems(page.data());
+    } catch (FmsUiException ex) {
+      ApiClientExceptionHandler.handle(ex);
+    }
+  }
+
+  private void showDiff(int version) {
+    try {
+      FlagVersionDetailDto snapshot = flagUiService.getVersion(
+          GlobalContextBar.resolveAppId(), flagKey, version, GlobalContextBar.resolveEnvironment());
+      FlagDetailDto current = flagUiService.getFlag(GlobalContextBar.resolveAppId(), flagKey);
+      diffArea.removeAll();
+      diffArea.add(new DiffPanel(current, snapshot.snapshot()));
+    } catch (FmsUiException ex) {
+      ApiClientExceptionHandler.handle(ex);
+    }
+  }
+
+  private void rollback(int version) {
+    FmsConfirmDialog.confirmDestructive(
+        "Rollback",
+        "Rollback " + flagKey + " to version " + version + "?",
+        () -> {
+          try {
+            flagUiService.rollback(flagKey, new RollbackFlagDto(
+                GlobalContextBar.resolveAppId(),
+                GlobalContextBar.resolveEnvironment(),
+                version,
+                "Rollback from console"));
+            FmsNotification.success("Rollback started.");
+            load();
+          } catch (FmsUiException ex) {
+            ApiClientExceptionHandler.handle(ex);
+          }
+        });
   }
 }

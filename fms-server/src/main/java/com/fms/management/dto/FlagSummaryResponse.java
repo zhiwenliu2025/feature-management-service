@@ -10,6 +10,9 @@ public record FlagSummaryResponse(
         String name,
         String type,
         FlagStatus status,
+        Object defaultValue,
+        java.util.List<String> tags,
+        boolean draftDirty,
         Instant updatedAt
 ) {
 }

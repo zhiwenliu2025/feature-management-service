@@ -26,9 +26,13 @@ public class ConsoleSecurityConfig {
   @Bean
   @Order(2)
   @Profile("local")
-  SecurityFilterChain localConsoleSecurityFilterChain(HttpSecurity http) throws Exception {
+  SecurityFilterChain localConsoleSecurityFilterChain(
+      HttpSecurity http,
+      LocalConsoleAuthenticationFilter localConsoleAuthenticationFilter) throws Exception {
     return http
         .securityMatcher(CONSOLE_MATCHER)
+        .addFilterBefore(localConsoleAuthenticationFilter,
+            org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
         .with(VaadinSecurityConfigurer.vaadin(), configurer -> {})
         .build();
   }

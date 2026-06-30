@@ -7,13 +7,15 @@ import com.fms.console.dashboard.ui.DashboardView;
 import com.fms.console.explain.ui.ExplainView;
 import com.fms.console.flag.ui.FlagListView;
 import com.fms.console.release.ui.ReleaseListView;
+import com.fms.console.shared.ui.components.UserMenu;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.Layout;
@@ -24,12 +26,45 @@ import com.vaadin.flow.server.auth.AnonymousAllowed;
 public class MainLayout extends AppLayout {
 
   private final AccessControlService accessControl;
+  private final Div breadcrumbSlot = new Div();
+  private final Div bannerSlot = new Div();
 
-  public MainLayout(AccessControlService accessControl) {
+  public MainLayout(
+      AccessControlService accessControl,
+      GlobalContextBar contextBar,
+      LayoutUiService layoutUiService) {
     this.accessControl = accessControl;
+    layoutUiService.register(this::setBreadcrumb, this::showKillSwitchBanner, this::clearBanner);
     setPrimarySection(Section.DRAWER);
     addToDrawer(createHeader(), createNavigation());
-    addToNavbar(createNavbar());
+    addToNavbar(createNavbar(contextBar));
+
+    breadcrumbSlot.addClassName("fms-breadcrumb-slot");
+    bannerSlot.addClassName("fms-banner-slot");
+    VerticalLayout wrapper = new VerticalLayout(bannerSlot, breadcrumbSlot);
+    wrapper.setPadding(false);
+    wrapper.setSpacing(false);
+    wrapper.setWidthFull();
+    addToNavbar(wrapper);
+  }
+
+  public void setBreadcrumb(com.vaadin.flow.component.Component breadcrumb) {
+    breadcrumbSlot.removeAll();
+    if (breadcrumb != null) {
+      breadcrumbSlot.add(breadcrumb);
+    }
+  }
+
+  public void showKillSwitchBanner(String message) {
+    bannerSlot.removeAll();
+    Div banner = new Div();
+    banner.setText(message);
+    banner.addClassName("fms-kill-switch-banner");
+    bannerSlot.add(banner);
+  }
+
+  public void clearBanner() {
+    bannerSlot.removeAll();
   }
 
   private HorizontalLayout createHeader() {
@@ -66,10 +101,8 @@ public class MainLayout extends AppLayout {
     return nav;
   }
 
-  private HorizontalLayout createNavbar() {
-    GlobalContextBar contextBar = new GlobalContextBar();
-    Span userMenu = new Span("User");
-    userMenu.getElement().setAttribute("aria-label", "User menu");
+  private HorizontalLayout createNavbar(GlobalContextBar contextBar) {
+    UserMenu userMenu = new UserMenu();
 
     HorizontalLayout navbar = new HorizontalLayout(contextBar, userMenu);
     navbar.setWidthFull();

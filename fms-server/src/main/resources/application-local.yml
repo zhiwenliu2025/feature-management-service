@@ -15,6 +15,9 @@ fms:
       enabled: false
     api-key:
       enforced: false
+  console:
+    api-base-url: ""
+    local-api-key: ""
 
 management:
   otlp:
