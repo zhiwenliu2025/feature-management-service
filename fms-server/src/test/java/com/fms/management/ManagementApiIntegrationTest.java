@@ -12,22 +12,10 @@ import com.fms.management.dto.RuleInput;
 import com.fms.management.dto.UpdateApplicationRequest;
 import com.fms.management.dto.UpdateFlagRequest;
 import com.fms.management.dto.UpdateRuleRequest;
-import com.redis.testcontainers.RedisContainer;
-import org.junit.jupiter.api.BeforeEach;
+import com.fms.sync.SyncIntegrationTestSupport;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
 import java.util.Map;
@@ -43,31 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Testcontainers
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("local")
-class ManagementApiIntegrationTest extends ManagementIntegrationTestSupport {
-
-    @Container
-    static PostgreSQLContainer postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:18"));
-
-    @Container
-    static RedisContainer redis = new RedisContainer(DockerImageName.parse("redis:8"));
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", redis::getFirstMappedPort);
-    }
-
-    @BeforeEach
-    void injectMockMvc(@Autowired MockMvc mockMvc) {
-        this.mockMvc = mockMvc;
-    }
+class ManagementApiIntegrationTest extends SyncIntegrationTestSupport {
 
     @Test
     void managementFlagLifecycle() throws Exception {
@@ -260,10 +224,12 @@ class ManagementApiIntegrationTest extends ManagementIntegrationTestSupport {
         publishFlag(SEED_APP, flagKey, "prod")
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.flagVersion").value(1));
+        publishWorkerService.processPendingJobs();
 
         publishFlag(SEED_APP, flagKey, "prod")
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.flagVersion").value(2));
+        publishWorkerService.processPendingJobs();
 
         mockMvc.perform(post("/api/v1/management/flags/{flagKey}/rollback", flagKey)
                         .contentType(MediaType.APPLICATION_JSON)

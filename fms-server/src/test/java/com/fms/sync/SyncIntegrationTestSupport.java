@@ -1,45 +1,29 @@
 package com.fms.sync;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fms.management.ManagementIntegrationTestSupport;
+import com.fms.management.dto.CreateApiKeyRequest;
+import com.fms.testsupport.IntegrationTestSupport;
 import com.fms.worker.PublishWorkerService;
-import com.redis.testcontainers.RedisContainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import java.util.List;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Testcontainers
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("local")
-public abstract class SyncIntegrationTestSupport extends ManagementIntegrationTestSupport {
+public abstract class SyncIntegrationTestSupport extends IntegrationTestSupport {
 
-    @Container
-    static PostgreSQLContainer postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:18"));
-
-    @Container
-    static RedisContainer redis = new RedisContainer(DockerImageName.parse("redis:8"));
+    protected static final String API_KEY_HEADER = "Authorization";
 
     @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", redis::getFirstMappedPort);
+    static void configureSyncProperties(DynamicPropertyRegistry registry) {
         registry.add("fms.worker.publish.poll-interval-ms", () -> "60000");
         registry.add("fms.sync.delta-max-gap", () -> "5");
     }
@@ -47,13 +31,14 @@ public abstract class SyncIntegrationTestSupport extends ManagementIntegrationTe
     @Autowired
     protected PublishWorkerService publishWorkerService;
 
-    @Autowired
-    private StringRedisTemplate redisTemplate;
+    protected String dataPlaneApiKeyAuthorization;
 
     @BeforeEach
-    void setUpSyncTest(@Autowired MockMvc mockMvc) {
+    void setUpSyncTest(@Autowired MockMvc mockMvc) throws Exception {
         this.mockMvc = mockMvc;
-        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
+        resetRedis();
+        publishWorkerService.processPendingJobs();
+        this.dataPlaneApiKeyAuthorization = "ApiKey " + createDataPlaneApiKey();
     }
 
     protected long publishAndProcess(String appId, String flagKey, String environment) throws Exception {
@@ -61,5 +46,21 @@ public abstract class SyncIntegrationTestSupport extends ManagementIntegrationTe
         JsonNode body = objectMapper.readTree(publishResult.getResponse().getContentAsString());
         publishWorkerService.processPendingJobs();
         return body.get("configVersion").asLong();
+    }
+
+    private String createDataPlaneApiKey() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/management/applications/{appId}/api-keys", SEED_APP)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateApiKeyRequest(
+                                "sync-integration-test",
+                                List.of("sync", "evaluate", "explain:read"),
+                                null))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).get("apiKey").asText();
+    }
+
+    protected MockHttpServletRequestBuilder withDataPlaneAuth(MockHttpServletRequestBuilder builder) {
+        return builder.header(API_KEY_HEADER, dataPlaneApiKeyAuthorization);
     }
 }

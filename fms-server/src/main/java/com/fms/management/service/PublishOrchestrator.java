@@ -157,6 +157,7 @@ public class PublishOrchestrator {
         int flagVersion = flagVersionRepository.countByFlag_IdAndEnvironment(flag.getId(), request.environment()) + 1;
 
         Map<String, Object> snapshot = SnapshotBuilder.build(flag, rules, releaseExternalId);
+        snapshot.put("status", FlagStatus.published.name());
         FlagVersionEntity versionEntity = new FlagVersionEntity();
         versionEntity.setFlag(flag);
         versionEntity.setEnvironment(request.environment());

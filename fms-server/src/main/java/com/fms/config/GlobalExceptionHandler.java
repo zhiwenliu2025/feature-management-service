@@ -15,6 +15,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
@@ -68,6 +69,21 @@ public class GlobalExceptionHandler {
                         "Request validation failed.",
                         request.getHeader(RequestContextFilter.REQUEST_ID_HEADER),
                         details));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    ResponseEntity<ErrorResponse> handleMissingRequestParameter(
+            MissingServletRequestParameterException ex,
+            HttpServletRequest request) {
+        String module = MDC.get(RequestContextFilter.MDC_MODULE);
+        metrics.recordError(FmsErrorCode.VALIDATION_ERROR.name(), module == null ? "unknown" : module);
+        return ResponseEntity
+                .badRequest()
+                .body(ErrorResponse.of(
+                        FmsErrorCode.VALIDATION_ERROR.name(),
+                        "Required request parameter '" + ex.getParameterName() + "' is missing.",
+                        request.getHeader(RequestContextFilter.REQUEST_ID_HEADER),
+                        null));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

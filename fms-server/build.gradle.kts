@@ -34,6 +34,10 @@ dependencies {
     testImplementation(libs.testcontainers.redis)
 }
 
+tasks.named<Test>("test") {
+    maxParallelForks = 1
+}
+
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveBaseName.set("fms-server")
 }

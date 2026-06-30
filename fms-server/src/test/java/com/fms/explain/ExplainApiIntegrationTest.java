@@ -123,7 +123,7 @@ class ExplainApiIntegrationTest extends EvaluateIntegrationTestSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new KillSwitchRequest(
                                 SEED_APP, "dev", "global", null, false, "test kill switch"))))
-                .andExpect(status().isCreated());
+                .andExpect(status().isOk());
 
         ExplainRequest request = new ExplainRequest(
                 "dev",

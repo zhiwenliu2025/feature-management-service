@@ -32,7 +32,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
         replaceRules(SEED_APP, flagKey, "dev");
         long configVersion = publishAndProcess(SEED_APP, flagKey, "dev");
 
-        mockMvc.perform(get("/api/v1/sync/snapshot")
+        mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/snapshot"))
                         .param("environment", "dev")
                         .param("appId", SEED_APP))
                 .andExpect(status().isOk())
@@ -55,7 +55,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
         replaceRules(SEED_APP, flagKey, "dev");
         publishAndProcess(SEED_APP, flagKey, "dev");
 
-        mockMvc.perform(get("/api/v1/sync/snapshot")
+        mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/snapshot"))
                         .param("environment", "dev")
                         .param("appId", SEED_APP))
                 .andExpect(status().isOk())
@@ -80,7 +80,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
                                 null))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/v1/sync/snapshot")
+        mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/snapshot"))
                         .param("environment", "dev")
                         .param("appId", appSlug))
                 .andExpect(status().isOk())
@@ -97,7 +97,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
         replaceRules(SEED_APP, flagKey, "dev");
         long configVersion = publishAndProcess(SEED_APP, flagKey, "dev");
 
-        mockMvc.perform(get("/api/v1/sync/snapshot")
+        mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/snapshot"))
                         .param("environment", "dev")
                         .param("appId", SEED_APP)
                         .param("sinceVersion", "0"))
@@ -115,7 +115,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
         replaceRules(SEED_APP, flagKey, "dev");
         publishAndProcess(SEED_APP, flagKey, "dev");
 
-        MvcResult result = mockMvc.perform(get("/api/v1/sync/snapshot")
+        MvcResult result = mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/snapshot"))
                         .param("environment", "dev")
                         .param("appId", SEED_APP)
                         .header(HttpHeaders.ACCEPT_ENCODING, "gzip"))
@@ -143,7 +143,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
         replaceRules(SEED_APP, flagKey, "dev");
         long configVersion = publishAndProcess(SEED_APP, flagKey, "dev");
 
-        mockMvc.perform(head("/api/v1/sync/version")
+        mockMvc.perform(withDataPlaneAuth(head("/api/v1/sync/version"))
                         .param("environment", "dev")
                         .param("appId", SEED_APP))
                 .andExpect(status().isOk())
@@ -159,7 +159,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
         replaceRules(SEED_APP, flagKey, "dev");
         long configVersion = publishAndProcess(SEED_APP, flagKey, "dev");
 
-        mockMvc.perform(head("/api/v1/sync/version")
+        mockMvc.perform(withDataPlaneAuth(head("/api/v1/sync/version"))
                         .param("environment", "dev"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Config-Version", String.valueOf(configVersion)))
@@ -175,7 +175,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
         long firstVersion = publishAndProcess(SEED_APP, flagKey, "dev");
         long secondVersion = publishAndProcess(SEED_APP, flagKey, "dev");
 
-        mockMvc.perform(get("/api/v1/sync/snapshot")
+        mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/snapshot"))
                         .param("environment", "dev")
                         .param("appId", SEED_APP)
                         .param("sinceVersion", String.valueOf(firstVersion)))
@@ -196,7 +196,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
         long configVersion = publishAndProcess(SEED_APP, flagKey, "dev");
         String etag = "\"dev:" + SEED_APP + ":" + configVersion + "\"";
 
-        mockMvc.perform(get("/api/v1/sync/snapshot")
+        mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/snapshot"))
                         .param("environment", "dev")
                         .param("appId", SEED_APP)
                         .param("sinceVersion", String.valueOf(configVersion))
@@ -214,7 +214,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
         replaceRules(SEED_APP, flagKey, "dev");
         long configVersion = publishAndProcess(SEED_APP, flagKey, "dev");
 
-        mockMvc.perform(get("/api/v1/sync/snapshot")
+        mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/snapshot"))
                         .param("environment", "dev")
                         .param("appId", SEED_APP)
                         .param("sinceVersion", String.valueOf(configVersion)))
@@ -234,7 +234,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
             publishAndProcess(SEED_APP, flagKey, "dev");
         }
 
-        mockMvc.perform(get("/api/v1/sync/snapshot")
+        mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/snapshot"))
                         .param("environment", "dev")
                         .param("appId", SEED_APP)
                         .param("sinceVersion", String.valueOf(firstVersion)))
@@ -244,7 +244,7 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
 
     @Test
     void streamEndpointStartsAsyncSseConnection() throws Exception {
-        mockMvc.perform(get("/api/v1/sync/stream")
+        mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/stream"))
                         .param("environment", "dev")
                         .param("appId", SEED_APP)
                         .accept(MediaType.TEXT_EVENT_STREAM))
@@ -255,11 +255,11 @@ class SyncApiIntegrationTest extends SyncIntegrationTestSupport {
 
     @Test
     void snapshotRequiresEnvironmentAndAppId() throws Exception {
-        mockMvc.perform(get("/api/v1/sync/snapshot")
+        mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/snapshot"))
                         .param("appId", SEED_APP))
                 .andExpect(status().isBadRequest());
 
-        mockMvc.perform(get("/api/v1/sync/snapshot")
+        mockMvc.perform(withDataPlaneAuth(get("/api/v1/sync/snapshot"))
                         .param("environment", "dev"))
                 .andExpect(status().isBadRequest());
     }

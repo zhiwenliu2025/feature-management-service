@@ -1,6 +1,7 @@
 package com.fms.management;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fms.management.dto.CreateFlagRequest;
 import com.fms.management.dto.PublishFlagRequest;
 import com.fms.management.dto.ReplaceRulesRequest;
@@ -21,7 +22,7 @@ public abstract class ManagementIntegrationTestSupport {
 
     protected static final String SEED_APP = "checkout-service";
 
-    protected final ObjectMapper objectMapper = new ObjectMapper();
+    protected final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     protected MockMvc mockMvc;
 

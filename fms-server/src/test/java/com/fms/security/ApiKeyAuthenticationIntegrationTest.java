@@ -5,8 +5,7 @@ import com.fms.sync.SyncIntegrationTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.List;
@@ -16,12 +15,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@TestPropertySource(properties = "fms.security.api-key.enforced=true")
 class ApiKeyAuthenticationIntegrationTest extends SyncIntegrationTestSupport {
-
-    @DynamicPropertySource
-    static void enforceApiKeys(DynamicPropertyRegistry registry) {
-        registry.add("fms.security.api-key.enforced", () -> "true");
-    }
 
     @Test
     void rejectsDataPlaneRequestWithoutApiKey() throws Exception {
