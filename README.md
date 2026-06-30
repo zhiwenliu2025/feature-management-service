@@ -13,7 +13,7 @@ Centralized feature-flag platform for managing thousands of flags across web, AP
 | **Rule engine** | Deterministic evaluation with percentage rollout, targeting, and short-circuit rules |
 | **Publish pipeline** | PostgreSQL outbox (`publish_jobs`) → worker → Redis compiled snapshots |
 
-The admin console (Vaadin 25, Aura theme) is documented but not yet implemented in this repository.
+The admin console (Vaadin 25, Aura theme) is scaffolded in `fms-console` and served at **http://localhost:8080/** when running `fms-server`.
 
 ## Architecture
 
@@ -37,6 +37,7 @@ See [Technical Architecture](docs/Feature_Management_Service_Technical_Architect
 | Module | Description |
 |--------|-------------|
 | `fms-server` | Spring Boot application — all HTTP APIs, persistence, cache, publish worker |
+| `fms-console` | Vaadin 25 admin console (Aura theme) — co-deployed with `fms-server` |
 | `fms-rule-engine` | Shared deterministic rule engine library |
 | `fms-common` | Shared DTOs, exceptions, API types |
 | `docs/` | BRD, API design, database schema, UI design, technology stack |
@@ -96,6 +97,8 @@ curl http://localhost:8080/api/ready
 ```
 
 Open **http://localhost:8080/swagger-ui.html** for interactive API docs.
+
+With the `local` profile, open **http://localhost:8080/** for the Vaadin admin console scaffold.
 
 ## API surface
 
@@ -173,7 +176,7 @@ OpenTelemetry tracing is configurable via `OTEL_EXPORTER_OTLP_ENDPOINT`. Sample 
 | Cache | Redis 8, Lettuce |
 | API docs | springdoc-openapi 3.x, OpenAPI 3.1 |
 | Security | Spring Security, OAuth2 resource server, API keys |
-| Admin UI (planned) | Vaadin 25.1, Aura theme |
+| Admin UI | Vaadin 25.1.7, Aura theme (`fms-console`) |
 
 Details: [Technology Stack](docs/Feature_Management_Service_Technology_Stack.md)
 

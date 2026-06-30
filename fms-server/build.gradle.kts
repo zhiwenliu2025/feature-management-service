@@ -1,12 +1,15 @@
 plugins {
     alias(libs.plugins.spring.boot)
+    alias(libs.plugins.vaadin)
     java
 }
 
 dependencies {
     implementation(platform(libs.spring.boot.dependencies))
+    implementation(platform(libs.vaadin.bom))
     implementation(project(":fms-common"))
     implementation(project(":fms-rule-engine"))
+    implementation(project(":fms-console"))
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.data.jpa)
@@ -24,6 +27,8 @@ dependencies {
     implementation(libs.flyway.core)
     implementation(libs.flyway.database.postgresql)
     implementation(libs.postgresql)
+
+    developmentOnly(libs.vaadin.dev)
 
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor:4.1.0")
 

@@ -1,0 +1,23 @@
+/* FMS Admin Console — Aura brand customization (see UI Design §5.2) */
+
+html {
+  --aura-accent-color-light: hsl(214, 90%, 48%);
+  --aura-accent-color-dark: hsl(214, 80%, 65%);
+  --aura-base-size: 16;
+  color-scheme: light dark;
+}
+
+.fms-context-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-gap, 0.5rem);
+}
+
+.fms-page-title {
+  margin: 0;
+  font-size: var(--aura-font-size-xl);
+}
+
+.fms-placeholder {
+  color: var(--vaadin-text-color-secondary);
+}

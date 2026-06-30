@@ -101,6 +101,10 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+vaadin:
+  launch-browser: false
+  allowed-packages: com.vaadin,org.vaadin,com.fms.console
+
 logging:
   level:
     com.fms: INFO
